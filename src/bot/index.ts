@@ -82,7 +82,24 @@ async function sweepDrafts() {
   }
 }
 
-main().catch((error) => {
+/**
+ * A rejected token is a configuration mistake, not a transient fault: it will
+ * fail identically on every restart until a person edits the environment. Say
+ * exactly that once, then idle before exiting — the restart policy would
+ * otherwise spin the container against Telegram several times a second and
+ * bury the one line that explains why.
+ */
+const BAD_TOKEN_BACKOFF_MS = 30_000;
+
+main().catch(async (error) => {
+  if (error instanceof GrammyError && error.error_code === 401) {
+    console.error(
+      "[askarr] Telegram rejected the bot token. Check TELEGRAM_BOT_TOKEN against the one BotFather gave you.",
+    );
+    await new Promise((resolve) => setTimeout(resolve, BAD_TOKEN_BACKOFF_MS));
+    process.exit(1);
+  }
+
   console.error("[askarr] failed to start:", error);
   process.exit(1);
 });
