@@ -124,7 +124,7 @@ export default async function RequestsPage({
             hint="Widen the search or clear the filters to see everything."
             action={
               <Button
-                render={<Link href="/requests" />}
+                render={<Link href="/requests" />} nativeButton={false}
                 size="sm"
                 variant="outline"
               >
@@ -137,7 +137,7 @@ export default async function RequestsPage({
             title="No requests waiting."
             hint="Requests arrive from the Telegram group. Check that the group is allowed and that an instance is connected."
             action={
-              <ActionButton render={<Link href="/chats" />} size="sm">
+              <ActionButton render={<Link href="/chats" />} nativeButton={false} size="sm">
                 Allow a group
               </ActionButton>
             }

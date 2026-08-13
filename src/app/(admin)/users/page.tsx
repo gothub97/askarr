@@ -59,7 +59,7 @@ export default async function UsersPage() {
           title="Nobody has talked to the bot yet."
           hint="People appear here as guests the first time they message the bot in an allowed group."
           action={
-            <ActionButton render={<Link href="/chats" />} size="sm">
+            <ActionButton render={<Link href="/chats" />} nativeButton={false} size="sm">
               Allow a group
             </ActionButton>
           }

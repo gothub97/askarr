@@ -92,7 +92,7 @@ function SetupAlreadyDone() {
             administrator can be created from here.
           </AlertDescription>
         </Alert>
-        <Button render={<Link href="/login" />} size="lg" className="w-full">
+        <Button render={<Link href="/login" />} nativeButton={false} size="lg" className="w-full">
           Sign in
         </Button>
       </CardContent>

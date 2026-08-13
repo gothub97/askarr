@@ -77,7 +77,7 @@ export default async function DashboardPage() {
             title="No instance is connected yet."
             hint="Askarr needs at least one Radarr or Sonarr instance before anyone can request anything."
             action={
-              <ActionButton render={<Link href="/instances" />} size="sm">
+              <ActionButton render={<Link href="/instances" />} nativeButton={false} size="sm">
                 Add your first instance
               </ActionButton>
             }
@@ -161,7 +161,7 @@ export default async function DashboardPage() {
             hint="Radarr and Sonarr report progress through the webhook. Add it from the instance page, then press Test."
             action={
               <Button
-                render={<Link href="/instances" />}
+                render={<Link href="/instances" />} nativeButton={false}
                 size="sm"
                 variant="outline"
               >

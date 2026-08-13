@@ -60,13 +60,16 @@ function statusLine(overview: BotOverview): {
   }
 
   if (!status.alive) {
+    // Saving a token here cannot start anything: the bot is its own process,
+    // and the back office can only talk to one that is already up. Saying
+    // "not running" without saying how to run it reads as a broken token.
     return {
       tone: "bad",
       label: "Not running",
       detail:
         status.runtime?.state === "stopped"
-          ? "The bot process shut down cleanly. Start it again to serve the group."
-          : "No heartbeat from the bot process. Check that it is running.",
+          ? "The bot process shut down cleanly. The token below is saved and will be picked up as soon as it starts again."
+          : "The token below is saved, but nothing is polling Telegram. The bot runs as its own process, separate from this web app — start it and this turns green on its own.",
     };
   }
 
@@ -277,11 +280,37 @@ export function BotManager({
             </div>
           </dl>
 
+          {!overview.status.alive && (
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground">
+                Start the bot process:
+              </p>
+              <Data className="text-foreground">
+                docker compose up -d bot
+              </Data>
+              <p className="text-xs text-muted-foreground">
+                Or <Data>npm run dev:bot</Data> when running from source.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <ActionButton
               size="sm"
               onClick={restart}
-              disabled={pending || overview.token.source === "missing"}
+              // A restart request is a row the bot reads on its next tick.
+              // Nothing reads it while the process is down, so offering the
+              // button there would promise something it cannot do.
+              disabled={
+                pending ||
+                !overview.status.alive ||
+                overview.token.source === "missing"
+              }
+              title={
+                overview.status.alive
+                  ? undefined
+                  : "The bot is not running, so there is nothing to restart."
+              }
             >
               Restart bot
             </ActionButton>
