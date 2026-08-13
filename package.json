@@ -13,7 +13,10 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\"",
     "test:db": "node --env-file-if-exists=.env.test --import tsx --test \"src/**/*.test.ts\"",
-    "test:db:setup": "docker exec askarr-dev-pg createdb -U askarr askarr_test || true"
+    "test:db:setup": "docker exec askarr-dev-pg createdb -U askarr askarr_test || true",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:tag": "changeset tag && git push --follow-tags"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -35,6 +38,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

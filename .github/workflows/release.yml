@@ -1,17 +1,24 @@
 name: Release
 
-# Publishes the container image to GitHub Container Registry.
+# The release train, in two merges.
 #
-#   push to main   -> ghcr.io/<owner>/askarr:edge
-#   tag v1.2.3     -> :v1.2.3, :1.2, :1 and :latest
+#   1. You merge a feature branch into main. If it carried a .changeset/*.md,
+#      this workflow opens (or updates) a PR called
+#      "chore(release): version packages" — that PR folds every changeset into
+#      CHANGELOG.md and bumps the version in package.json.
+#   2. You merge THAT PR. This workflow runs again, sees no changesets left,
+#      runs `changeset tag`, pushes the tag, publishes the image to GHCR and
+#      cuts the GitHub release.
 #
-# One image serves both processes; `web` and `bot` differ only by command.
-# Nothing install-specific is baked in — Askarr reads APP_URL at run time.
+# Everything lives in one workflow on purpose. A tag pushed with GITHUB_TOKEN
+# does not trigger further workflow runs — GitHub blocks that to avoid loops —
+# so a separate `on: push: tags:` job would simply never fire. The image build
+# is therefore a dependent job in the same run, gated on the tag having been
+# created.
 
 on:
   push:
     branches: [main]
-    tags: ["v*.*.*"]
   workflow_dispatch:
 
 env:
@@ -23,21 +30,62 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  version:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      # Required to push to GHCR with the built-in GITHUB_TOKEN.
-      packages: write
-      # Lets the build attach a provenance attestation to the pushed image.
-      attestations: write
-      id-token: write
-
+      contents: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      packages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Changesets needs the history to work out what has already shipped.
+          fetch-depth: 0
 
-      # arm64 matters here: a lot of self-hosters run this on a Pi or an
-      # ARM NAS next to the *arr stack it talks to.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run changeset:version
+          # `changeset tag` prints "New tag: askarr@x.y.z", which is what the
+          # action parses to decide that something was released.
+          publish: npm run changeset:tag
+          title: "chore(release): version packages"
+          commit: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: version
+    if: needs.version.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The version job pushed a commit and a tag; check those out, not the
+          # main this run started from.
+          ref: main
+          fetch-depth: 0
+
+      - id: version
+        run: |
+          echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # arm64 because a lot of these run on a Pi or an ARM NAS next to the
+      # *arr stack they talk to.
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
@@ -52,10 +100,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=edge,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.value }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.value }}
+            type=semver,pattern={{major}},value=v${{ steps.version.outputs.value }}
           labels: |
             org.opencontainers.image.title=Askarr
             org.opencontainers.image.description=Request films and shows from a Telegram group, straight into Radarr and Sonarr.
@@ -81,16 +128,45 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-  github-release:
-    needs: publish
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          tag_name: askarr@${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          # CHANGELOG.md is the source of truth; the body points at it rather
+          # than duplicating it into a second place that can drift.
+          body: |
+            Docker image:
+
+            ```
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}
+            ```
+
+            See [CHANGELOG.md](https://github.com/${{ env.IMAGE_NAME }}/blob/main/CHANGELOG.md) for what changed.
+
+  # Every push to main that is not a release still refreshes :edge, so the
+  # bleeding edge is installable without waiting for a version bump.
+  edge:
+    needs: version
+    if: needs.version.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:edge
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

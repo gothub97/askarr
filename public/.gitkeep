@@ -1,0 +1,3 @@
+Next serves this directory at the site root. It is empty today — the favicon
+lives at src/app/icon.svg, which is the App Router convention — but the
+Dockerfile copies it, and an untracked empty directory breaks that build.
