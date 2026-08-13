@@ -65,8 +65,18 @@ export interface LookupResult {
   year: number | null;
   overview: string | null;
   posterUrl: string | null;
-  /** True when the instance already manages this title. */
+  /**
+   * True when the instance already manages this title.
+   *
+   * Managed is not the same as watchable, and conflating the two is how a
+   * request for a film Radarr merely knows about gets answered "already in the
+   * library, go watch it". Read it alongside hasFile and monitored.
+   */
   alreadyManaged: boolean;
+  /** A playable file exists: a movie file, or at least one episode. */
+  hasFile: boolean;
+  /** The instance is actually hunting for it. False means nothing will happen. */
+  monitored: boolean;
   /** The id on the instance side, when already managed. */
   arrId: number | null;
   /** Highest season number, for the "Current season" choice. */

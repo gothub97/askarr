@@ -15,6 +15,7 @@ import { getAppSettings } from "./settings";
 import {
   ArrError,
   addToInstance,
+  resumeOnInstance,
   lookup,
   lookupByExternalId,
   type LookupResult,
@@ -269,8 +270,18 @@ export type SubmitOutcome =
       subscription: Subscription;
       reason: "role" | "quota" | "full_series";
     }
-  /** The instance already has this title; nothing was sent. */
+  /** The instance holds a playable file; nothing was sent. */
   | { kind: "already_have"; mediaItem: MediaItem; subscription: Subscription }
+  /**
+   * The instance manages the title but holds no file. `resumed` means it was
+   * sitting there unmonitored and Askarr put it back under watch.
+   */
+  | {
+      kind: "already_tracked";
+      mediaItem: MediaItem;
+      subscription: Subscription;
+      resumed: boolean;
+    }
   /** Someone already requested it; this person was added as a subscriber. */
   | {
       kind: "already_requested";
@@ -369,11 +380,21 @@ export async function submitRequest(
     };
   }
 
-  // ---- Not tracked yet. Ask the instance whether it already holds the title.
-  let alreadyInLibrary: { arrId: number | null } | null = null;
+  // ---- Not tracked yet. Ask the instance what it already knows about it.
+  let onInstance: {
+    arrId: number | null;
+    hasFile: boolean;
+    monitored: boolean;
+  } | null = null;
   try {
     const fresh = await lookupByExternalId(instance, selection.externalId);
-    if (fresh?.alreadyManaged) alreadyInLibrary = { arrId: fresh.arrId };
+    if (fresh?.alreadyManaged) {
+      onInstance = {
+        arrId: fresh.arrId,
+        hasFile: fresh.hasFile,
+        monitored: fresh.monitored,
+      };
+    }
   } catch (error) {
     return {
       kind: "error",
@@ -384,15 +405,50 @@ export async function submitRequest(
     };
   }
 
-  if (alreadyInLibrary) {
+  if (onInstance) {
+    // Holding a file is the only state that means "go watch it".
+    if (onInstance.hasFile) {
+      const { mediaItem, subscription } = await createItemWithSubscription({
+        params,
+        status: MediaStatus.ALREADY_HAVE,
+        statusReason: "Already in the library when requested",
+        arrId: onInstance.arrId,
+      });
+      // Nothing is sent to the instance in this branch, by design.
+      return { kind: "already_have", mediaItem, subscription };
+    }
+
+    /*
+     * Managed but empty. Unmonitored is the case that matters: the instance
+     * will never search for it, so answering "we have it" would leave the
+     * request doing nothing at all. Putting it back under watch is the only
+     * response that makes the request mean something.
+     */
+    let resumed = false;
+    if (!onInstance.monitored && onInstance.arrId !== null) {
+      try {
+        await resumeOnInstance(instance, onInstance.arrId);
+        resumed = true;
+      } catch (error) {
+        return {
+          kind: "error",
+          message:
+            error instanceof ArrError
+              ? error.hint
+              : `${selection.title} is on ${instance.label} but not being searched for, and it could not be restarted. An admin needs to monitor it.`,
+        };
+      }
+    }
+
     const { mediaItem, subscription } = await createItemWithSubscription({
       params,
-      status: MediaStatus.ALREADY_HAVE,
-      statusReason: "Already in the library when requested",
-      arrId: alreadyInLibrary.arrId,
+      status: MediaStatus.QUEUED,
+      statusReason: resumed
+        ? "Was on the instance unmonitored; monitoring resumed and a search started"
+        : "Already on the instance, waiting for a release",
+      arrId: onInstance.arrId,
     });
-    // Nothing is sent to Radarr/Sonarr in this branch, by design.
-    return { kind: "already_have", mediaItem, subscription };
+    return { kind: "already_tracked", mediaItem, subscription, resumed };
   }
 
   // ---- Genuinely new. Apply the role rules.

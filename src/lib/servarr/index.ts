@@ -108,3 +108,19 @@ export async function addToInstance(
   });
   return series.id ?? 0;
 }
+
+/**
+ * Re-monitors a title the instance already has and kicks off a search.
+ *
+ * Only worth calling when a lookup came back alreadyManaged with no file: the
+ * request is then a no-op unless something puts it back under watch.
+ */
+export async function resumeOnInstance(
+  instance: ArrInstance,
+  arrId: number,
+): Promise<void> {
+  const connection = toConnection(instance);
+  return instance.kind === "RADARR"
+    ? radarr.resumeMovie(connection, arrId)
+    : sonarr.resumeSeries(connection, arrId);
+}

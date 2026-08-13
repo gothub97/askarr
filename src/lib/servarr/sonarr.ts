@@ -129,7 +129,39 @@ function toLookupResult(series: SonarrSeries): LookupResult {
     overview: series.overview ?? null,
     posterUrl: pickPoster(series.images),
     alreadyManaged: arrId > 0,
+    // A series is never wholly "there"; one episode on disk is what separates
+    // "we have some of this" from "we have nothing".
+    hasFile: (series.statistics?.episodeFileCount ?? 0) > 0,
+    monitored: series.monitored === true,
     arrId: arrId > 0 ? arrId : null,
     latestSeason,
   };
+}
+
+/**
+ * Puts a series the instance already holds back under watch and hunts for it.
+ * Same reasoning as resumeMovie: unmonitored means Sonarr will never look.
+ */
+export async function resumeSeries(
+  connection: ArrConnection,
+  arrId: number,
+): Promise<void> {
+  const series = await arrRequest<SonarrSeries & Record<string, unknown>>(
+    connection,
+    { path: `/api/v3/series/${arrId}` },
+  );
+
+  if (series.monitored !== true) {
+    await arrRequest(connection, {
+      path: `/api/v3/series/${arrId}`,
+      method: "PUT",
+      body: { ...series, monitored: true },
+    });
+  }
+
+  await arrRequest(connection, {
+    path: "/api/v3/command",
+    method: "POST",
+    body: { name: "SeriesSearch", seriesId: arrId },
+  });
 }

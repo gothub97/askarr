@@ -211,6 +211,17 @@ export function renderOutcome(
         "Go watch it.",
       ].join("\n");
 
+    case "already_tracked":
+      return outcome.resumed
+        ? [
+            `${tag}${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} was already on the shelf but nobody was looking for it.`,
+            "Monitoring is back on and the hunt has started — you will hear from me when it lands.",
+          ].join("\n")
+        : [
+            `${tag}${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already on the list, waiting for a release.`,
+            "Nothing to do but wait — you will get the ping when it lands.",
+          ].join("\n");
+
     case "already_requested":
       return [
         `${tag}Someone got there first — ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already on the list.`,

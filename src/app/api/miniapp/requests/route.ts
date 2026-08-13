@@ -219,6 +219,17 @@ function describeOutcome(
         status: outcome.mediaItem.status,
         message: `${title} is already in the library. Go watch it.`,
       };
+    case "already_tracked":
+      return {
+        // Reuses the queued outcome on the wire: from the requester's side it
+        // is the same story, something is now on its way.
+        outcome: "queued",
+        title,
+        status: outcome.mediaItem.status,
+        message: outcome.resumed
+          ? `${title} was on the shelf but nothing was searching for it. Monitoring is back on and the hunt has started.`
+          : `${title} is already on the list, waiting for a release. You'll get a message when it lands.`,
+      };
     case "already_requested":
       return {
         outcome: "already_requested",

@@ -118,9 +118,44 @@ function toLookupResult(movie: RadarrMovie): LookupResult {
     year: movie.year ?? null,
     overview: movie.overview ?? null,
     posterUrl: pickPoster(movie.images),
-    // A lookup result carrying an id greater than 0 is already in the library.
+    // An id greater than 0 means the instance manages it — not that it holds
+    // a file, and not that it is looking for one.
     alreadyManaged: arrId > 0,
+    hasFile: movie.hasFile === true,
+    monitored: movie.monitored === true,
     arrId: arrId > 0 ? arrId : null,
     latestSeason: null,
   };
+}
+
+/**
+ * Puts a movie the instance already holds back under watch and hunts for it.
+ *
+ * Radarr keeps unmonitored movies in the library and never searches for them,
+ * so a request for one would otherwise be answered "we have it" and then do
+ * nothing at all, forever. PUT wants the whole object back, so the current one
+ * is read first rather than patched.
+ */
+export async function resumeMovie(
+  connection: ArrConnection,
+  arrId: number,
+): Promise<void> {
+  const movie = await arrRequest<RadarrMovie & Record<string, unknown>>(
+    connection,
+    { path: `/api/v3/movie/${arrId}` },
+  );
+
+  if (movie.monitored !== true) {
+    await arrRequest(connection, {
+      path: `/api/v3/movie/${arrId}`,
+      method: "PUT",
+      body: { ...movie, monitored: true },
+    });
+  }
+
+  await arrRequest(connection, {
+    path: "/api/v3/command",
+    method: "POST",
+    body: { name: "MoviesSearch", movieIds: [arrId] },
+  });
 }

@@ -27,8 +27,13 @@ const realFetch = globalThis.fetch;
 /** Calls the stub recorded, so a test can assert what was and was not sent. */
 let calls: { url: string; method: string; body: unknown }[] = [];
 
-/** Titles the fake instance claims to already manage, by tmdbId. */
-let libraryIds = new Set<number>();
+/**
+ * What the fake instance claims about a title, by tmdbId.
+ *
+ * Managed, holding a file, and being monitored are three separate things, and
+ * conflating them is exactly the bug these tests exist to pin.
+ */
+let library = new Map<number, { hasFile: boolean; monitored: boolean }>();
 
 function installFetchStub() {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -42,15 +47,17 @@ function installFetchStub() {
 
     if (parsed.pathname.endsWith("/api/v3/movie/lookup")) {
       const tmdbId = Number(term.replace("tmdb:", "")) || 550;
-      const managed = libraryIds.has(tmdbId);
+      const held = library.get(tmdbId);
       return json([
         {
           // Radarr reports a non-zero id when it already manages the title.
-          id: managed ? 4242 : 0,
+          id: held ? 4242 : 0,
           tmdbId,
           title: "Fight Club",
           year: 1999,
           overview: "An insomniac and a soap salesman.",
+          hasFile: held?.hasFile ?? false,
+          monitored: held?.monitored ?? false,
           images: [{ coverType: "poster", remoteUrl: "https://img/poster.jpg" }],
         },
       ]);
@@ -58,6 +65,17 @@ function installFetchStub() {
 
     if (parsed.pathname.endsWith("/api/v3/movie") && method === "POST") {
       return json({ id: 777, tmdbId: body?.tmdbId, title: body?.title });
+    }
+
+    // Reading one movie back, which resumeMovie does before it PUTs.
+    if (/\/api\/v3\/movie\/\d+$/.test(parsed.pathname) && method === "GET") {
+      return json({ id: 4242, tmdbId: 550, title: "Fight Club", monitored: false });
+    }
+    if (/\/api\/v3\/movie\/\d+$/.test(parsed.pathname) && method === "PUT") {
+      return json({ ...(body as object), id: 4242 });
+    }
+    if (parsed.pathname.endsWith("/api/v3/command") && method === "POST") {
+      return json({ id: 1, name: body?.name });
     }
 
     return json([]);
@@ -73,7 +91,21 @@ function json(value: unknown): Response {
 
 function addCalls() {
   return calls.filter(
-    (call) => call.method === "POST" && call.url.includes("/api/v3/movie"),
+    (call) =>
+      call.method === "POST" && /\/api\/v3\/movie$/.test(new URL(call.url).pathname),
+  );
+}
+
+function searchCommands() {
+  return calls.filter(
+    (call) =>
+      call.method === "POST" && call.url.includes("/api/v3/command"),
+  );
+}
+
+function monitorPuts() {
+  return calls.filter(
+    (call) => call.method === "PUT" && /\/api\/v3\/movie\/\d+$/.test(new URL(call.url).pathname),
   );
 }
 
@@ -103,7 +135,7 @@ beforeEach(async () => {
   if (!DB_TESTS_ENABLED) return;
   if (!databaseUp) return;
   calls = [];
-  libraryIds = new Set();
+  library = new Map();
 
   // Order matters: MediaItem cascades to Subscription.
   await prisma.subscription.deleteMany();
@@ -214,7 +246,7 @@ describe("submitRequest", DB_TEST_SKIP, () => {
   // Acceptance: a movie already in the library triggers no add call.
   test("a film already in the library is never sent to Radarr", async (t) => {
     if (!needsDatabase(t)) return;
-    libraryIds.add(550);
+    library.set(550, { hasFile: true, monitored: true });
     const ada = await makeUser(TelegramRole.ADMIN, 1n);
 
     const outcome = await submit(ada);
@@ -227,6 +259,60 @@ describe("submitRequest", DB_TEST_SKIP, () => {
 
     // The requester is still subscribed, so they get told about it.
     assert.equal(await prisma.subscription.count(), 1);
+  });
+
+  /*
+   * The three states behind "the instance already knows this title". Radarr
+   * reports a non-zero id for all of them, and treating that alone as "already
+   * in the library" told someone to go watch a film that did not exist and
+   * that nothing was even looking for.
+   */
+  test("a film on the instance with no file is not called watchable", async (t) => {
+    if (!needsDatabase(t)) return;
+    library.set(550, { hasFile: false, monitored: true });
+    const ada = await makeUser(TelegramRole.ADMIN, 20n);
+
+    const outcome = await submit(ada);
+
+    assert.equal(outcome.kind, "already_tracked");
+    assert.equal(
+      outcome.kind === "already_tracked" && outcome.resumed,
+      false,
+      "it was already monitored, so nothing needed restarting",
+    );
+    assert.equal(addCalls().length, 0, "it is already there; do not add it again");
+    assert.equal(monitorPuts().length, 0, "monitoring was already on");
+
+    const item = await prisma.mediaItem.findFirstOrThrow();
+    assert.equal(item.status, MediaStatus.QUEUED);
+  });
+
+  test("an unmonitored film is put back under watch and searched for", async (t) => {
+    if (!needsDatabase(t)) return;
+    library.set(550, { hasFile: false, monitored: false });
+    const ada = await makeUser(TelegramRole.ADMIN, 21n);
+
+    const outcome = await submit(ada);
+
+    assert.equal(outcome.kind, "already_tracked");
+    assert.equal(
+      outcome.kind === "already_tracked" && outcome.resumed,
+      true,
+      "an unmonitored title must be resumed, or the request does nothing",
+    );
+    assert.equal(monitorPuts().length, 1, "monitoring must be turned back on");
+    assert.equal(
+      (monitorPuts()[0]?.body as { monitored?: boolean })?.monitored,
+      true,
+      "the PUT must actually set monitored, not just re-send the object",
+    );
+
+    const searches = searchCommands();
+    assert.equal(searches.length, 1, "a search must actually be kicked off");
+    assert.equal((searches[0]?.body as { name?: string })?.name, "MoviesSearch");
+
+    // Still never re-added: it is already in the library, just neglected.
+    assert.equal(addCalls().length, 0);
   });
 
   // Acceptance: a GUEST request stays pending and never reaches Radarr.
