@@ -1,4 +1,3 @@
-import { AudioVersion } from "@prisma/client";
 import { z } from "zod";
 import type { SonarrMonitorMode } from "../../lib/servarr/types";
 
@@ -21,6 +20,8 @@ export const CALLBACK_ACTIONS = [
   "c",
   /** Drop the search. */
   "x",
+  /** Request a title chosen through inline mode; id is <kind><externalId>. */
+  "i",
   /** Admin approves a media item; id is the MediaItem id. */
   "ap",
   /** Admin rejects a media item; id is the MediaItem id. */
@@ -69,23 +70,21 @@ export function decodeCallback(data: string): CallbackPayload | null {
  * The two answers gathered before submitting. They ride in `arg` as two
  * characters so the whole payload stays well under the byte limit even with a
  * cuid in the middle.
+ *
+ * The instance travels as its position in listInstancesForKind() rather than
+ * its id: a cuid is 25 characters and would not fit beside the draft id in
+ * Telegram's 64-byte callback_data. That caps the picker at 10 instances of a
+ * kind, which is far past what a private group needs.
  */
 export interface Choice {
-  version: AudioVersion | null;
+  /** Index into listInstancesForKind(), not an instance id. */
+  instanceIndex: number | null;
   monitor: Extract<SonarrMonitorMode, "all" | "lastSeason"> | null;
 }
 
-export const EMPTY_CHOICE: Choice = { version: null, monitor: null };
+export const MAX_SELECTABLE_INSTANCES = 10;
 
-const VERSION_TO_CODE: Record<AudioVersion, string> = {
-  [AudioVersion.VO]: "V",
-  [AudioVersion.MULTI]: "M",
-};
-
-const CODE_TO_VERSION: Record<string, AudioVersion> = {
-  V: AudioVersion.VO,
-  M: AudioVersion.MULTI,
-};
+export const EMPTY_CHOICE: Choice = { instanceIndex: null, monitor: null };
 
 const CODE_TO_MONITOR: Record<string, Choice["monitor"]> = {
   a: "all",
@@ -93,15 +92,16 @@ const CODE_TO_MONITOR: Record<string, Choice["monitor"]> = {
 };
 
 export function encodeChoice(choice: Choice): string {
-  const version = choice.version ? VERSION_TO_CODE[choice.version] : "-";
+  const instance =
+    choice.instanceIndex === null ? "-" : String(choice.instanceIndex);
   const monitor = choice.monitor === "all" ? "a" : choice.monitor ? "l" : "-";
-  return `${version}${monitor}`;
+  return `${instance}${monitor}`;
 }
 
 export function decodeChoice(code: string): Choice | null {
-  if (!/^[VM-][al-]$/.test(code)) return null;
+  if (!/^[0-9-][al-]$/.test(code)) return null;
   return {
-    version: CODE_TO_VERSION[code[0]] ?? null,
+    instanceIndex: code[0] === "-" ? null : Number(code[0]),
     monitor: CODE_TO_MONITOR[code[1]] ?? null,
   };
 }

@@ -13,6 +13,7 @@ import { callbacks } from "./handlers/callbacks";
 import { chatMember } from "./handlers/chat-member";
 import type { AskarrContext } from "./handlers/context";
 import { guard } from "./handlers/guard";
+import { inline } from "./handlers/inline";
 
 /**
  * The bot process: long polling, no webhook, no business rules. Everything it
@@ -39,7 +40,12 @@ const IDLE_RETRY_MS = 10_000;
  * my_chat_member is not in Telegram's default set, and without it the bot
  * never learns it was added to a group, which breaks onboarding step 3.
  */
-const ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
+const ALLOWED_UPDATES = [
+  "message",
+  "callback_query",
+  "my_chat_member",
+  "inline_query",
+] as const;
 
 let shuttingDown = false;
 
@@ -96,6 +102,9 @@ function buildBot(token: string): Bot<AskarrContext> {
 
   // Ahead of the guard on purpose: see handlers/chat-member.ts.
   bot.use(chatMember);
+  // Also ahead of it: inline updates carry no chat, which the guard drops by
+  // design. See handlers/inline.ts for the gate it brings instead.
+  bot.use(inline);
   bot.use(guard);
   bot.use(commands);
   bot.use(callbacks);
