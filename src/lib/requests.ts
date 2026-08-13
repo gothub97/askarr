@@ -8,6 +8,7 @@ import {
   type Subscription,
   type TelegramUser,
 } from "@prisma/client";
+import { notifyMediaAvailable } from "./notifications";
 import { prisma } from "./prisma";
 import { getQuotaState, type QuotaState } from "./quota";
 import { decideApproval } from "./rbac";
@@ -607,6 +608,20 @@ async function refreshFromInstance(
       statusReason: `Found on ${instance.label} during a later check`,
     },
   });
+
+  /*
+   * Tell the subscribers now rather than leaving it to the drain.
+   *
+   * The drain holds an item back for the aggregation window, which exists to
+   * group the episodes of a season arriving in a burst. Nothing is arriving
+   * here — the file landed long ago and we have only just noticed — so the
+   * window would be ten minutes of silence after a person pressed a button.
+   *
+   * Not awaited: the requester is waiting on a reply, and notifyMediaAvailable
+   * never throws.
+   */
+  void notifyMediaAvailable(mediaItem.id);
+
   return { mediaItem, note };
 }
 
