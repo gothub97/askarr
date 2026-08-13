@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Public_Sans, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Lato } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+/**
+ * Lato carries both the display and the body role.
+ *
+ * It ships 100/300/400/700/900 — no 500 and no 600 — so the two weights the
+ * design asks for land on their nearest real cut: body 400 stays 400, and
+ * display 600 becomes 700. Loading only the weights that exist keeps the
+ * browser from synthesising a fake bold, which is what makes a substituted
+ * weight look smeared.
+ */
+const lato = Lato({
+  variable: "--font-lato",
   subsets: ["latin"],
-  weight: ["600"],
-  display: "swap",
-});
-
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -33,11 +35,17 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // The font variables go on <html>, not <body>. The @theme tokens in
+  // globals.css resolve against :root, so a --font-* defined one level down on
+  // <body> is still undefined where --font-sans is built from it — which
+  // silently empties the family and drops the whole app to Times.
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${bricolage.variable} ${publicSans.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+    <html
+      lang="en"
+      className={`${lato.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

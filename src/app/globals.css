@@ -19,8 +19,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --font-sans: var(--font-public-sans);
-  --font-heading: var(--font-bricolage);
+  /* Lato carries body and display; mono stays, so identifiers read as data. */
+  --font-sans: var(--font-lato);
+  --font-heading: var(--font-lato);
   --font-mono: var(--font-jetbrains-mono);
 
   /* Scale: 12 / 14 / 16 / 20 / 28 / 40. No intermediate sizes. */
@@ -168,12 +169,14 @@
     @apply font-sans;
   }
 
-  /* Display type: page titles and large counters only. */
+  /* Display type: page titles and large counters only.
+     Body and display are one family now, so weight and tracking are what
+     separate them. 700 because Lato has no 600 to fall back on. */
   h1,
   h2,
   .font-display {
     font-family: var(--font-heading);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 

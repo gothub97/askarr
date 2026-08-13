@@ -1,5 +1,6 @@
 import type { TelegramUser } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getActiveBotToken } from "@/lib/bot-token";
 import { ensureTelegramUser } from "@/lib/requests";
 import { isTelegramAdmin } from "@/lib/rbac";
 import { displayNameOf, validateInitData } from "./initdata";
@@ -65,7 +66,10 @@ const FORBIDDEN_403: MiniAppRejection = {
 export async function authenticateMiniApp(
   request: Request,
 ): Promise<MiniAppAuthResult> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  // The active token, not the environment: initData is signed with whatever
+  // token the bot is currently running. Validating against a stale one does
+  // not fail loudly — it rejects every genuine signature as a forgery.
+  const botToken = await getActiveBotToken();
   if (!botToken) {
     // Refusing loudly beats validating against an empty secret, which would
     // accept a signature anyone could compute.

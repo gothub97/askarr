@@ -10,7 +10,10 @@ const serverSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.string().url(),
   NEXT_PUBLIC_APP_URL: z.string().url(),
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
+  // Optional: the live token is whatever the admin saved in the database.
+  // This one only seeds a fresh install, so Askarr can boot with no UI visit.
+  // See src/lib/bot-token.ts.
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_MINIAPP_URL: z.string().url().optional(),
   TZ: z.string().optional(),
 });

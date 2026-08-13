@@ -1,3 +1,5 @@
+import { getActiveBotToken } from "../bot-token";
+
 /**
  * Sending Telegram messages from the web process.
  *
@@ -23,9 +25,12 @@ export type SendResult =
   | { ok: true; messageId: number }
   | { ok: false; reason: "reply_target_missing" | "blocked" | "other"; description: string };
 
-function botToken(): string {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not set");
+async function botToken(): Promise<string> {
+  // Through bot-token.ts, never straight off the environment: the admin can
+  // change the token from the back office, and a sender still holding the old
+  // one would be talking as a bot that no longer exists.
+  const token = await getActiveBotToken();
+  if (!token) throw new Error("No bot token is configured");
   return token;
 }
 
@@ -35,7 +40,7 @@ export async function callTelegram<T>(
 ): Promise<{ ok: true; result: T } | { ok: false; description: string; errorCode?: number }> {
   let response: Response;
   try {
-    response = await fetch(`${API_ROOT}/bot${botToken()}/${method}`, {
+    response = await fetch(`${API_ROOT}/bot${await botToken()}/${method}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

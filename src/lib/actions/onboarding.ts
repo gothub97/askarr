@@ -9,6 +9,7 @@ import type {
   SetupSummary,
 } from "@/app/(public)/onboarding/types";
 import { auth } from "../auth";
+import { getActiveBotToken } from "../bot-token";
 import { prisma } from "../prisma";
 import { getSession } from "../session";
 import { isSetupCompleted, markSetupCompleted } from "../settings";
@@ -141,15 +142,15 @@ export type ResolveBotResult =
   | { ok: true; username: string; displayName: string }
   | { ok: false; gone?: true; message: string };
 
-/** Resolves the bot behind TELEGRAM_BOT_TOKEN so step 3 can name it. */
+/** Resolves the bot behind the active token so step 3 can name it. */
 export async function resolveTelegramBotAction(): Promise<ResolveBotResult> {
   if (await isSetupCompleted()) return gone();
 
-  if (!process.env.TELEGRAM_BOT_TOKEN) {
+  if (!(await getActiveBotToken())) {
     return {
       ok: false,
       message:
-        "TELEGRAM_BOT_TOKEN is not set. Add it to the environment and restart Askarr.",
+        "No bot token yet. Set TELEGRAM_BOT_TOKEN, or add one from the back office once setup is done.",
     };
   }
 

@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/instances", label: "Instances" },
   { href: "/users", label: "Telegram users" },
   { href: "/chats", label: "Groups" },
+  { href: "/bot", label: "Bot" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
