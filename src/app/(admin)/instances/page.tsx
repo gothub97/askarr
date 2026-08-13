@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function InstancesPage() {
   const [instances, collisions] = await Promise.all([
     prisma.arrInstance.findMany({
-      orderBy: [{ kind: "asc" }, { version: "asc" }, { label: "asc" }],
+      orderBy: [{ kind: "asc" }, { label: "asc" }],
     }),
     findRootFolderCollisions(),
   ]);

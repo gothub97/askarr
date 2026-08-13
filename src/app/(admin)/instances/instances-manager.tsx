@@ -117,7 +117,6 @@ export function InstancesManager({
                         {instance.label}
                       </span>
                       <Badge variant="outline">{instance.kind}</Badge>
-                      <Badge variant="outline">{instance.version}</Badge>
                       {instance.isDefault && (
                         <Badge variant="secondary">Default</Badge>
                       )}

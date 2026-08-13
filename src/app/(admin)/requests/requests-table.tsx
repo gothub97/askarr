@@ -52,7 +52,6 @@ export interface RequestRow {
   status: MediaStatus;
   statusReason: string | null;
   instanceLabel: string;
-  instanceVersion: string;
   requesters: string[];
   createdAt: string;
 }
@@ -138,9 +137,6 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
 
                 <TableCell className="align-top whitespace-normal">
                   <span className="text-sm text-foreground">{row.instanceLabel}</span>
-                  <Data className="block text-muted-foreground">
-                    {row.instanceVersion}
-                  </Data>
                 </TableCell>
 
                 <TableCell className="align-top">

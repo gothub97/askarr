@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import type { ArrKindValue, AudioVersionValue } from "./types";
+import type { ArrKindValue } from "./types";
 
 /**
  * Step 2 — the first Radarr or Sonarr instance.
@@ -46,14 +46,10 @@ interface Probe {
 }
 
 const KIND_LABELS: Record<ArrKindValue, string> = {
-  RADARR: "Radarr — movies",
-  SONARR: "Sonarr — series",
+  RADARR: "Radarr",
+  SONARR: "Sonarr",
 };
 
-const VERSION_LABELS: Record<AudioVersionValue, string> = {
-  VO: "VO — original audio",
-  MULTI: "MULTI — includes a French track",
-};
 
 function formatFreeSpace(bytes: number | null): string | null {
   if (bytes === null) return null;
@@ -71,7 +67,6 @@ export function StepInstance({
 }) {
   const [label, setLabel] = useState("");
   const [kind, setKind] = useState<ArrKindValue>("RADARR");
-  const [version, setVersion] = useState<AudioVersionValue>("MULTI");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [allowSelfSigned, setAllowSelfSigned] = useState(false);
@@ -131,7 +126,6 @@ export function StepInstance({
       const result = await createInstanceAction({
         label,
         kind,
-        version,
         baseUrl,
         apiKey,
         qualityProfileId: Number(qualityProfileId),
@@ -177,7 +171,7 @@ export function StepInstance({
           </Alert>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="instance-kind">Kind</Label>
             <Select
@@ -203,39 +197,13 @@ export function StepInstance({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="instance-version">Version</Label>
-            <Select
-              value={version}
-              onValueChange={(value) => {
-                if (value) setVersion(value as AudioVersionValue);
-              }}
-            >
-              <SelectTrigger
-                id="instance-version"
-                aria-label="Version"
-                className="w-full"
-              >
-                <SelectValue>
-                  {(value: string | null) =>
-                    VERSION_LABELS[(value ?? "MULTI") as AudioVersionValue]
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="VO">{VERSION_LABELS.VO}</SelectItem>
-                <SelectItem value="MULTI">{VERSION_LABELS.MULTI}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="instance-label">Name</Label>
           <Input
             id="instance-label"
-            placeholder="Radarr MULTI"
+            placeholder="Radarr French"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />

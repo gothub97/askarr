@@ -8,7 +8,6 @@
  */
 
 export type ArrKindValue = "RADARR" | "SONARR";
-export type AudioVersionValue = "VO" | "MULTI";
 
 export interface PublicTelegramChat {
   id: string;
@@ -24,7 +23,6 @@ export interface ConfiguredInstance {
   id: string;
   label: string;
   kind: ArrKindValue;
-  version: AudioVersionValue;
   baseUrl: string;
   qualityProfileId: number;
   rootFolderPath: string;

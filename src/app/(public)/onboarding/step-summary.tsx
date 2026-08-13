@@ -127,7 +127,6 @@ export function StepSummary({
                         {instance.label}
                       </span>
                       <Badge variant="outline">{instance.kind}</Badge>
-                      <Badge variant="outline">{instance.version}</Badge>
                     </div>
                     <p className="font-data text-xs break-all text-muted-foreground">
                       {instance.baseUrl}

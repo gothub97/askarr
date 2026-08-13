@@ -59,7 +59,7 @@ export default async function RequestsPage({
       orderBy: { createdAt: "desc" },
       take: MAX_ROWS,
       include: {
-        instance: { select: { label: true, version: true } },
+        instance: { select: { label: true } },
         subscriptions: {
           include: { telegramUser: { select: { displayName: true } } },
         },
@@ -85,7 +85,6 @@ export default async function RequestsPage({
     status: item.status,
     statusReason: item.statusReason,
     instanceLabel: item.instance.label,
-    instanceVersion: item.instance.version,
     requesters: item.subscriptions.map((s) => s.telegramUser.displayName),
     createdAt: formatTimestamp(item.createdAt),
   }));

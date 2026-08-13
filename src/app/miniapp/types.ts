@@ -1,5 +1,4 @@
 import type {
-  AudioVersion,
   MediaKind,
   MediaStatus,
   TelegramRole,
@@ -39,10 +38,16 @@ export interface MeDto {
   canRequest: boolean;
   quota: QuotaDto;
   /**
-   * Enabled audio versions per kind. The version picker is only worth showing
+   * Enabled instances per kind. The picker is only worth showing
    * when a kind has more than one.
    */
-  versions: Record<MediaKind, AudioVersion[]>;
+  instances: Record<MediaKind, InstanceOption[]>;
+}
+
+/** An instance a requester can send a title to, named as the admin named it. */
+export interface InstanceOption {
+  id: string;
+  label: string;
 }
 
 // --------------------------------------------------------------- requests
@@ -60,7 +65,6 @@ export interface RequestDto {
   status: MediaStatus;
   statusReason: string | null;
   instanceLabel: string;
-  version: AudioVersion;
   monitorMode: string | null;
   /** ISO 8601. */
   requestedAt: string;
@@ -126,7 +130,6 @@ export interface PendingRequestDto {
   overview: string | null;
   posterUrl: string | null;
   instanceLabel: string;
-  version: AudioVersion;
   monitorMode: string | null;
   statusReason: string | null;
   requestedAt: string;

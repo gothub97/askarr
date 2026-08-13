@@ -9,7 +9,7 @@ import type {
   SearchResponseDto,
   SubmitResponseDto,
 } from "./types";
-import type { AudioVersion, MediaKind, MediaStatus, TelegramRole } from "@prisma/client";
+import type { MediaKind, MediaStatus, TelegramRole } from "@prisma/client";
 
 /**
  * The Mini App's only way of talking to the server.
@@ -40,7 +40,7 @@ export interface MiniAppApi {
   submit(input: {
     kind: MediaKind;
     externalId: number;
-    version?: AudioVersion;
+    instanceId?: string;
     monitorMode?: "all" | "lastSeason" | null;
   }): Promise<SubmitResponseDto>;
   pending(): Promise<PendingListDto>;

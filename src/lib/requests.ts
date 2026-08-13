@@ -1,5 +1,4 @@
 import {
-  AudioVersion,
   MediaKind,
   MediaStatus,
   Prisma,
@@ -47,8 +46,9 @@ export async function listInstancesForKind(
 }
 
 /**
- * The instance to search against. Searching is version-agnostic (metadata is
- * the same either way), so the default instance is fine for lookups.
+ * The instance to search against. Lookup only reads metadata, which is the
+ * same on every instance of a kind, so the default one answers for all of
+ * them and the requester is not asked to choose before they have seen results.
  */
 export async function getSearchInstance(
   kind: MediaKind,
@@ -57,16 +57,20 @@ export async function getSearchInstance(
   return instances[0] ?? null;
 }
 
-export async function getInstanceForVersion(
+/**
+ * The instance a requester picked, by position in listInstancesForKind().
+ *
+ * An index rather than an id because this travels in callback_data, which
+ * Telegram caps at 64 bytes — a cuid would not fit beside the draft id. The
+ * ordering is deterministic, and a draft lives 15 minutes, so the only way to
+ * land on the wrong one is to add or disable an instance mid-request.
+ */
+export async function getInstanceByIndex(
   kind: MediaKind,
-  version: AudioVersion,
+  index: number,
 ): Promise<ArrInstance | null> {
   const instances = await listInstancesForKind(kind);
-  return (
-    instances.find((i) => i.version === version && i.isDefault) ??
-    instances.find((i) => i.version === version) ??
-    null
-  );
+  return instances[index] ?? null;
 }
 
 // ------------------------------------------------------------------ drafts

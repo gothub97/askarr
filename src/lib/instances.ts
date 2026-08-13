@@ -1,4 +1,4 @@
-import { ArrKind, AudioVersion, type ArrInstance } from "@prisma/client";
+import { ArrKind, type ArrInstance } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "./prisma";
 import {
@@ -14,7 +14,6 @@ import {
 export const instanceInputSchema = z.object({
   label: z.string().min(1, "Give this instance a name.").max(60),
   kind: z.nativeEnum(ArrKind),
-  version: z.nativeEnum(AudioVersion),
   baseUrl: z
     .string()
     .min(1, "Enter the address of the instance.")
@@ -96,20 +95,20 @@ export async function testConnection(
 }
 
 /**
- * Only one instance can be the default for a given (kind, version) pair, so
- * promoting one demotes the others in the same transaction.
+ * Only one instance can be the default for a kind, so promoting one demotes
+ * the others in the same transaction.
  */
 export async function createInstance(input: InstanceInput): Promise<ArrInstance> {
   return prisma.$transaction(async (tx) => {
     const siblings = await tx.arrInstance.count({
-      where: { kind: input.kind, version: input.version },
+      where: { kind: input.kind },
     });
-    // The first instance of a pair is the default whether asked for or not.
+    // The first instance of a kind is the default whether asked for or not.
     const isDefault = input.isDefault || siblings === 0;
 
     if (isDefault) {
       await tx.arrInstance.updateMany({
-        where: { kind: input.kind, version: input.version },
+        where: { kind: input.kind },
         data: { isDefault: false },
       });
     }
@@ -125,7 +124,7 @@ export async function updateInstance(
   return prisma.$transaction(async (tx) => {
     if (input.isDefault) {
       await tx.arrInstance.updateMany({
-        where: { kind: input.kind, version: input.version, id: { not: id } },
+        where: { kind: input.kind, id: { not: id } },
         data: { isDefault: false },
       });
     }
@@ -148,7 +147,6 @@ export interface PublicInstance {
   id: string;
   label: string;
   kind: ArrKind;
-  version: AudioVersion;
   baseUrl: string;
   apiKeyMasked: string;
   qualityProfileId: number;
@@ -168,7 +166,6 @@ export function toPublicInstance(
     id: instance.id,
     label: instance.label,
     kind: instance.kind,
-    version: instance.version,
     baseUrl: instance.baseUrl,
     apiKeyMasked: maskApiKey(instance.apiKey),
     qualityProfileId: instance.qualityProfileId,

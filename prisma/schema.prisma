@@ -69,11 +69,6 @@ enum ArrKind {
   SONARR
 }
 
-enum AudioVersion {
-  VO // original audio only
-  MULTI // release carrying a French audio track
-}
-
 enum TelegramRole {
   BLOCKED
   GUEST
@@ -97,10 +92,13 @@ enum MediaStatus {
 }
 
 model ArrInstance {
-  id               String       @id @default(cuid())
-  label            String // "Radarr MULTI", "Sonarr VO"
+  id String @id @default(cuid())
+
+  // The label is what a requester actually picks between — "Radarr",
+  // "Radarr French". It is the only axis that separates two instances of the
+  // same kind, so it is theirs to name rather than something Askarr imposes.
+  label            String
   kind             ArrKind
-  version          AudioVersion
   baseUrl          String // may include a path prefix, e.g. https://10.0.0.5/admin/radarr
   apiKey           String
   qualityProfileId Int
@@ -109,13 +107,13 @@ model ArrInstance {
   allowSelfSigned  Boolean      @default(false)
   webhookSecret    String       @default(cuid())
   enabled          Boolean      @default(true)
-  isDefault        Boolean      @default(false) // one default per (kind, version)
+  isDefault        Boolean      @default(false) // one default per kind
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
   mediaItems MediaItem[]
 
-  @@unique([kind, version, label])
+  @@unique([kind, label])
 }
 
 model TelegramChat {
@@ -144,7 +142,7 @@ model TelegramUser {
 
 // A MediaItem is one title pushed (or to be pushed) to one instance.
 // Unique on (externalId, instanceId): two people requesting the same
-// movie in MULTI share the same MediaItem.
+// movie on the same instance share the same MediaItem.
 model MediaItem {
   id           String      @id @default(cuid())
   kind         MediaKind

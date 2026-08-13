@@ -1,4 +1,4 @@
-import { AudioVersion, MediaKind, MediaStatus } from "@prisma/client";
+import { MediaKind, MediaStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type {
@@ -7,7 +7,6 @@ import type {
   SubmitResponseDto,
 } from "@/app/miniapp/types";
 import {
-  getInstanceForVersion,
   listInstancesForKind,
   listUserRequests,
   submitRequest,
@@ -53,8 +52,8 @@ const listQuerySchema = z.object({
 const submitBodySchema = z.object({
   kind: z.enum([MediaKind.MOVIE, MediaKind.SERIES]),
   externalId: z.number().int().positive(),
-  /** Optional: a kind served by a single version has nothing to choose. */
-  version: z.enum([AudioVersion.VO, AudioVersion.MULTI]).optional(),
+  /** Optional: a kind served by a single instance has nothing to choose. */
+  instanceId: z.string().min(1).optional(),
   /** Series only. "all" is the full series, "lastSeason" the current one. */
   monitorMode: z.enum(["all", "firstSeason", "lastSeason"]).nullish(),
 });
@@ -90,7 +89,6 @@ export async function GET(request: Request): Promise<Response> {
         status: sub.mediaItem.status,
         statusReason: sub.mediaItem.statusReason,
         instanceLabel: sub.mediaItem.instance.label,
-        version: sub.mediaItem.instance.version,
         monitorMode: sub.mediaItem.monitorMode,
         requestedAt: sub.createdAt.toISOString(),
       }));
@@ -121,18 +119,19 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const versions = new Set(instances.map((i) => i.version));
-    let version = parsed.data.version;
-    if (!version) {
-      if (versions.size > 1) {
-        return miniAppBadRequest("Pick a version before confirming.");
-      }
-      version = instances[0].version;
+    // Unlike the bot, the Mini App has room for a real id, so it sends one.
+    // Resolved against the enabled list so a disabled or foreign instance
+    // cannot be pushed to by a handcrafted request.
+    const requested = parsed.data.instanceId;
+    if (!requested && instances.length > 1) {
+      return miniAppBadRequest("Pick where it should go before confirming.");
     }
 
-    const instance = await getInstanceForVersion(kind, version);
+    const instance = requested
+      ? instances.find((i) => i.id === requested)
+      : instances[0];
     if (!instance) {
-      return miniAppBadRequest("That version is not available right now.");
+      return miniAppBadRequest("That instance is not available right now.");
     }
 
     // ---- Re-read the title from the instance rather than trusting the client.

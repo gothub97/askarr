@@ -8,7 +8,7 @@ import type { ArrWebhookPayload } from "./schemas";
  * The webhook carries no Askarr identifier, so the only handle is the external
  * id the instance knows the title by: tmdbId on Radarr, tvdbId on Sonarr. Both
  * live in MediaItem.externalId, unique per instance — which is why instanceId
- * is always part of the lookup: the same movie requested in VO and in MULTI is
+ * is always part of the lookup: the same movie requested on two instances is
  * two MediaItems, and only the instance that fired the webhook owns this event.
  */
 

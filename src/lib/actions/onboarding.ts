@@ -299,7 +299,6 @@ export async function getSetupSummaryAction(): Promise<SummaryResult> {
         id: instance.id,
         label: instance.label,
         kind: instance.kind,
-        version: instance.version,
         baseUrl: instance.baseUrl,
         qualityProfileId: instance.qualityProfileId,
         rootFolderPath: instance.rootFolderPath,

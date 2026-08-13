@@ -1,15 +1,14 @@
-import { AudioVersion } from "@prisma/client";
 import { InlineKeyboard } from "grammy";
 import type { LookupResult } from "../../lib/servarr/types";
 import { buttonLabel } from "../render";
-import { type Choice, encodeCallback, encodeChoice } from "./callback";
+import {
+  MAX_SELECTABLE_INSTANCES,
+  type Choice,
+  encodeCallback,
+  encodeChoice,
+} from "./callback";
 
 const CANCEL_LABEL = "Cancel";
-
-const VERSION_LABEL: Record<AudioVersion, string> = {
-  [AudioVersion.VO]: "Original audio (VO)",
-  [AudioVersion.MULTI]: "Multi audio",
-};
 
 /** One row per result: labels are long and wrap badly side by side. */
 export function resultsKeyboard(
@@ -25,23 +24,31 @@ export function resultsKeyboard(
   return keyboard.text(CANCEL_LABEL, cancelData(draftId));
 }
 
-export function versionKeyboard(
+/**
+ * One button per instance, labelled with the name the admin gave it — the
+ * requester picks "Radarr" or "Radarr French", not an axis Askarr invented.
+ *
+ * One per row: labels are free text and wrap badly side by side.
+ */
+export function instanceKeyboard(
   draftId: string,
   choice: Choice,
-  versions: AudioVersion[],
+  instances: { label: string }[],
 ): InlineKeyboard {
   const keyboard = new InlineKeyboard();
-  for (const version of versions) {
-    keyboard.text(
-      VERSION_LABEL[version],
-      encodeCallback({
-        action: "s",
-        id: draftId,
-        arg: encodeChoice({ ...choice, version }),
-      }),
-    );
-  }
-  return keyboard.row().text(CANCEL_LABEL, cancelData(draftId));
+  instances.slice(0, MAX_SELECTABLE_INSTANCES).forEach((instance, index) => {
+    keyboard
+      .text(
+        instance.label,
+        encodeCallback({
+          action: "s",
+          id: draftId,
+          arg: encodeChoice({ ...choice, instanceIndex: index }),
+        }),
+      )
+      .row();
+  });
+  return keyboard.text(CANCEL_LABEL, cancelData(draftId));
 }
 
 export function monitorKeyboard(

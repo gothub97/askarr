@@ -1,4 +1,4 @@
-import { AudioVersion, MediaKind, type MediaStatus } from "@prisma/client";
+import { MediaKind, type MediaStatus } from "@prisma/client";
 import type { LookupResult } from "../lib/servarr/types";
 import { statusLabel, statusSentence } from "../lib/status";
 import { escapeHtml, mention } from "../lib/telegram/notify";
@@ -113,8 +113,8 @@ export function posterPreview(posterUrl: string | null) {
     : { is_disabled: true };
 }
 
-export function versionQuestion(): string {
-  return "Which audio version do you want?";
+export function instanceQuestion(): string {
+  return "Where should this go?";
 }
 
 export function monitorQuestion(latestSeason: number | null): string {
@@ -123,15 +123,21 @@ export function monitorQuestion(latestSeason: number | null): string {
     : "The whole run, or just the current season?";
 }
 
+/**
+ * The instance name is only worth repeating when there was a choice to make.
+ * With a single instance it is the only possible answer, and naming it reads
+ * as a setting the requester was asked about.
+ */
 export function confirmQuestion(
-  version: AudioVersion | null,
+  instanceLabel: string | null,
+  hadChoice: boolean,
   monitor: string | null,
 ): string {
   const bits: string[] = [];
-  if (version) bits.push(version === AudioVersion.VO ? "original audio" : "multi audio");
+  if (hadChoice && instanceLabel) bits.push(instanceLabel);
   if (monitor) bits.push(monitor === "all" ? "full series" : "current season");
   return bits.length
-    ? `Sending as <b>${escapeHtml(bits.join(", "))}</b>. Ready?`
+    ? `Sending to <b>${escapeHtml(bits.join(", "))}</b>. Ready?`
     : "Ready?";
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrKind, AudioVersion } from "@prisma/client";
+import { ArrKind } from "@prisma/client";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/admin/action-button";
@@ -35,19 +35,13 @@ import type { PublicInstance, TestConnectionResult } from "@/lib/instances";
 type Probe = Extract<TestConnectionResult, { ok: true }>;
 
 const KIND_LABELS: Record<ArrKind, string> = {
-  RADARR: "Radarr · movies",
-  SONARR: "Sonarr · series",
-};
-
-const VERSION_LABELS: Record<AudioVersion, string> = {
-  VO: "VO · original audio",
-  MULTI: "MULTI · French audio track",
+  RADARR: "Radarr",
+  SONARR: "Sonarr",
 };
 
 interface FormState {
   label: string;
   kind: ArrKind;
-  version: AudioVersion;
   baseUrl: string;
   apiKey: string;
   qualityProfileId: number | null;
@@ -61,7 +55,6 @@ function initialState(instance: PublicInstance | null): FormState {
   return {
     label: instance?.label ?? "",
     kind: instance?.kind ?? ArrKind.RADARR,
-    version: instance?.version ?? AudioVersion.MULTI,
     baseUrl: instance?.baseUrl ?? "",
     // Never prefilled: the real key is fetched only when explicitly asked for.
     apiKey: "",
@@ -161,7 +154,6 @@ export function InstanceForm({
       const payload = {
         label: form.label,
         kind: form.kind,
-        version: form.version,
         baseUrl: form.baseUrl,
         apiKey: form.apiKey,
         qualityProfileId: form.qualityProfileId ?? 0,
@@ -210,12 +202,12 @@ export function InstanceForm({
             <Input
               id="instance-label"
               value={form.label}
-              placeholder="Radarr MULTI"
+              placeholder="Radarr French"
               onChange={(event) => patch({ label: event.target.value })}
             />
           </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4">
             <Field id="instance-kind" label="Kind">
               <Select
                 items={KIND_LABELS}
@@ -237,26 +229,6 @@ export function InstanceForm({
               </Select>
             </Field>
 
-            <Field id="instance-version" label="Audio version">
-              <Select
-                items={VERSION_LABELS}
-                value={form.version}
-                onValueChange={(value) => {
-                  if (value) patch({ version: value as AudioVersion });
-                }}
-              >
-                <SelectTrigger id="instance-version" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(AudioVersion).map((version) => (
-                    <SelectItem key={version} value={version}>
-                      {VERSION_LABELS[version]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
           </div>
 
           <Field
@@ -418,9 +390,9 @@ export function InstanceForm({
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
               <div className="flex flex-col">
-                <Label htmlFor="instance-default">Default for this pair</Label>
+                <Label htmlFor="instance-default">Default for this kind</Label>
                 <span className="text-xs text-muted-foreground">
-                  Used when someone asks for this kind and audio version.
+                  Picked automatically when nobody chooses an instance by name.
                 </span>
               </div>
               <Switch

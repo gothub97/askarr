@@ -160,7 +160,7 @@ function ReadyShell({
         {tab === "search" && (
           <SearchTab
             api={api}
-            versions={me.versions}
+            instances={me.instances}
             onRequested={onRequested}
           />
         )}

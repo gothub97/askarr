@@ -1,4 +1,4 @@
-import { AudioVersion, MediaKind } from "@prisma/client";
+import { MediaKind } from "@prisma/client";
 import { GrammyError, type InlineKeyboard } from "grammy";
 import { z } from "zod";
 import type { LookupResult } from "../../lib/servarr/types";
@@ -6,7 +6,7 @@ import {
   MAX_RESULTS,
   draftResults,
   getDraft,
-  getInstanceForVersion,
+  getInstanceByIndex,
   listInstancesForKind,
   setDraftSelection,
   submitRequest,
@@ -21,7 +21,7 @@ import {
   approvalKeyboard,
   confirmKeyboard,
   monitorKeyboard,
-  versionKeyboard,
+  instanceKeyboard,
 } from "../keyboards/request";
 import {
   approvalPrompt,
@@ -31,7 +31,7 @@ import {
   posterPreview,
   renderOutcome,
   titleWithYear,
-  versionQuestion,
+  instanceQuestion,
 } from "../render";
 import type { AskarrContext } from "./context";
 
@@ -121,20 +121,19 @@ async function advance(
     return;
   }
 
-  const versions = [...new Set(instances.map((instance) => instance.version))];
-
-  // Only ask when there is genuinely something to choose between.
-  if (choice.version === null) {
-    if (versions.length > 1) {
+  // Only ask when there is genuinely something to choose between: one
+  // instance of a kind means there is no question worth putting to anyone.
+  if (choice.instanceIndex === null) {
+    if (instances.length > 1) {
       await editCard(
         ctx,
-        mediaCard(selection, versionQuestion()),
-        versionKeyboard(draft.id, choice, versions),
+        mediaCard(selection, instanceQuestion()),
+        instanceKeyboard(draft.id, choice, instances),
         selection.posterUrl,
       );
       return;
     }
-    choice = { ...choice, version: versions[0] ?? AudioVersion.VO };
+    choice = { ...choice, instanceIndex: 0 };
   }
 
   if (draft.kind === MediaKind.SERIES && choice.monitor === null) {
@@ -149,7 +148,16 @@ async function advance(
 
   await editCard(
     ctx,
-    mediaCard(selection, confirmQuestion(choice.version, choice.monitor)),
+    mediaCard(
+      selection,
+      confirmQuestion(
+        choice.instanceIndex === null
+          ? null
+          : (instances[choice.instanceIndex]?.label ?? null),
+        instances.length > 1,
+        choice.monitor,
+      ),
+    ),
     confirmKeyboard(draft.id, choice),
     selection.posterUrl,
   );
@@ -161,16 +169,16 @@ async function submit(
   selection: LookupResult,
   choice: Choice,
 ) {
-  if (!choice.version) {
+  if (choice.instanceIndex === null) {
     await ctx.answerCallbackQuery({ text: LOST_SELECTION, show_alert: true });
     return;
   }
 
-  const instance = await getInstanceForVersion(draft.kind, choice.version);
+  const instance = await getInstanceByIndex(draft.kind, choice.instanceIndex);
   if (!instance) {
     await editCard(
       ctx,
-      "That version is not set up anymore. Ask an admin to check the instances.",
+      "That instance is not set up anymore. Ask an admin to check the instances.",
       null,
       null,
     );

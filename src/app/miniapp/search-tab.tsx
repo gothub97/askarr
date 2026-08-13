@@ -1,6 +1,7 @@
 "use client";
 
-import type { AudioVersion, MediaKind } from "@prisma/client";
+import type { MediaKind } from "@prisma/client";
+import type { InstanceOption } from "./types";
 import { Search } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { MiniAppApiError, type MiniAppApi } from "./client";
@@ -29,11 +30,11 @@ const KIND_OPTIONS = [
 
 export function SearchTab({
   api,
-  versions,
+  instances,
   onRequested,
 }: {
   api: MiniAppApi;
-  versions: Record<MediaKind, AudioVersion[]>;
+  instances: Record<MediaKind, InstanceOption[]>;
   onRequested: () => void;
 }) {
   const [kind, setKind] = useState<MediaKind>("MOVIE");
@@ -143,7 +144,7 @@ export function SearchTab({
           api={api}
           kind={kind}
           result={selected}
-          versions={versions[kind] ?? []}
+          instances={instances[kind] ?? []}
           onClose={() => setSelected(null)}
           onRequested={onRequested}
         />
@@ -158,19 +159,19 @@ function DetailSheet({
   api,
   kind,
   result,
-  versions,
+  instances,
   onClose,
   onRequested,
 }: {
   api: MiniAppApi;
   kind: MediaKind;
   result: SearchResultDto;
-  versions: AudioVersion[];
+  instances: InstanceOption[];
   onClose: () => void;
   onRequested: () => void;
 }) {
-  // A single enabled version is not a choice, so it is never shown as one.
-  const [version, setVersion] = useState<AudioVersion>(versions[0] ?? "VO");
+  // A single enabled instance is not a choice, so it is never shown as one.
+  const [instanceId, setInstanceId] = useState<string>(instances[0]?.id ?? "");
   const [monitorMode, setMonitorMode] = useState<"all" | "lastSeason">("all");
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<SubmitResponseDto | null>(null);
@@ -183,7 +184,7 @@ function DetailSheet({
       const body = await api.submit({
         kind,
         externalId: result.externalId,
-        version: versions.length > 0 ? version : undefined,
+        instanceId: instances.length > 1 ? instanceId : undefined,
         monitorMode: kind === "SERIES" ? monitorMode : null,
       });
       setOutcome(body);
@@ -225,17 +226,17 @@ function DetailSheet({
 
         {outcome === null && (
           <>
-            {versions.length > 1 && (
+            {instances.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs text-muted-foreground">Audio version</p>
+                <p className="text-xs text-muted-foreground">Where</p>
                 <Segmented
-                  label="Audio version"
-                  options={versions.map((value) => ({
-                    value,
-                    label: value === "VO" ? "Original" : "Multi",
+                  label="Where it should go"
+                  options={instances.map((instance) => ({
+                    value: instance.id,
+                    label: instance.label,
                   }))}
-                  value={version}
-                  onChange={setVersion}
+                  value={instanceId}
+                  onChange={setInstanceId}
                 />
               </div>
             )}

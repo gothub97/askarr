@@ -39,9 +39,9 @@ export async function GET(request: Request): Promise<Response> {
         remaining: Number.isFinite(quota.remaining) ? quota.remaining : null,
         exceeded: quota.exceeded,
       },
-      versions: {
-        [MediaKind.MOVIE]: [...new Set(movieInstances.map((i) => i.version))],
-        [MediaKind.SERIES]: [...new Set(seriesInstances.map((i) => i.version))],
+      instances: {
+        [MediaKind.MOVIE]: movieInstances.map((i) => ({ id: i.id, label: i.label })),
+        [MediaKind.SERIES]: seriesInstances.map((i) => ({ id: i.id, label: i.label })),
       },
     };
 

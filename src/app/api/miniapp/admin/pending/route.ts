@@ -19,7 +19,6 @@ export async function GET(request: Request): Promise<Response> {
       overview: item.overview,
       posterUrl: item.posterUrl,
       instanceLabel: item.instance.label,
-      version: item.instance.version,
       monitorMode: item.monitorMode,
       statusReason: item.statusReason,
       requestedAt: item.createdAt.toISOString(),
