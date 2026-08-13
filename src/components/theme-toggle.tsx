@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * Three-state theme control: system / light / dark.
  *
  * A segmented control rather than a cycling button, because the three states
- * are not ordered and "system" is not a stop on the way to "dark". next-themes
+ * are not ordered and "system" is not a stop on the way to "dark". The provider
  * owns persistence (localStorage) and the class on <html>.
  *
  * Shared component: the back office and the onboarding shell both mount it.

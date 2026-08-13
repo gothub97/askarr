@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\"",
+    "test:db": "node --env-file-if-exists=.env.test --import tsx --test \"src/**/*.test.ts\"",
+    "test:db:setup": "docker exec askarr-dev-pg createdb -U askarr askarr_test || true"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -23,7 +25,6 @@
     "grammy": "^1.45.1",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
-    "next-themes": "^0.4.6",
     "prisma": "^6.19.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
