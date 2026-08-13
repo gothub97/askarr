@@ -1,21 +1,24 @@
 import type { ReactNode } from "react";
+import { AskarrMark } from "@/components/askarr-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * Shell for the two pages that exist before anyone is signed in: /login and
- * /onboarding. No navigation — there is nowhere else to go yet — just the
- * wordmark, the theme control, and one centred column.
+ * /onboarding. The same 60px chrome as the back office, so the app is already
+ * recognisable before the first sign-in — but no sidebar, because there is
+ * nowhere else to go yet.
  */
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col bg-background">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display text-base text-foreground">Askarr</span>
-          <span className="hidden text-xs text-muted-foreground sm:inline">
+      <header className="flex h-header shrink-0 items-center justify-between gap-3 bg-sidebar px-4 text-sidebar-foreground sm:px-6">
+        <span className="flex items-center gap-2">
+          <AskarrMark className="size-[22px] text-sidebar-primary" />
+          <span className="text-xl font-bold">Askarr</span>
+          <span className="hidden text-sm text-sidebar-foreground/70 sm:inline">
             Private screening room
           </span>
-        </div>
+        </span>
         <ThemeToggle />
       </header>
 

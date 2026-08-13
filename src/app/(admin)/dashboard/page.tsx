@@ -1,15 +1,24 @@
 import { MediaStatus } from "@prisma/client";
 import Link from "next/link";
-import { ActionButton } from "@/components/admin/action-button";
 import { Data, formatTimestamp } from "@/components/admin/data";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader, SectionTitle } from "@/components/admin/page-header";
-import { StatusRail } from "@/components/status-rail";
+import { StatusProgress } from "@/components/progress-bar";
+import { Poster } from "@/components/poster";
+import { Label } from "@/components/status-label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { prisma } from "@/lib/prisma";
 import { pingInstances } from "@/lib/instances";
 import { countPendingRequests, listPendingRequests } from "@/lib/requests";
+import { payloadTitle } from "@/lib/webhooks/correlate";
 
 // Instance health is a live probe over the network, so this page is never cached.
 export const dynamic = "force-dynamic";
@@ -39,84 +48,103 @@ export default async function DashboardPage() {
     pingInstances(),
     prisma.arrEvent.findMany({
       orderBy: { receivedAt: "desc" },
-      take: 10,
+      take: 12,
       include: { mediaItem: { select: { title: true } } },
     }),
     prisma.arrInstance.findMany({ select: { id: true, label: true } }),
-    listPendingRequests(5),
+    listPendingRequests(8),
   ]);
 
   const instanceLabels = new Map(instances.map((i) => [i.id, i.label]));
   const hasInstances = instances.length > 0;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-5">
+      {/*
+        The three counts ride in the page header as labels rather than as a row
+        of panels. Three big numbers on three cards is the shape every
+        generated dashboard takes, and it spends the top third of the screen
+        saying what one line says. The work starts immediately underneath.
+      */}
       <PageHeader
         title="Dashboard"
         description="What the screening room is doing right now."
+        action={
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <CountLabel
+              value={pendingCount}
+              noun="waiting"
+              kind="warning"
+              href="/requests?status=PENDING"
+            />
+            <CountLabel
+              value={inProgressCount}
+              noun="in progress"
+              kind="queue"
+              href="/requests?status=QUEUED"
+            />
+            <CountLabel
+              value={availableThisMonth}
+              noun="landed this month"
+              kind="success"
+            />
+          </div>
+        }
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Counter
-          value={pendingCount}
-          label="Waiting for approval"
-          href="/requests?status=PENDING"
-        />
-        <Counter
-          value={inProgressCount}
-          label="In progress"
-          href="/requests?status=QUEUED"
-        />
-        <Counter value={availableThisMonth} label="Available this month" />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <SectionTitle>Instance health</SectionTitle>
+      <section className="flex flex-col gap-2">
+        <SectionTitle>Instances</SectionTitle>
         {!hasInstances ? (
           <EmptyState
             title="No instance is connected yet."
             hint="Askarr needs at least one Radarr or Sonarr instance before anyone can request anything."
             action={
-              <ActionButton render={<Link href="/instances" />} nativeButton={false} size="sm">
+              <Button render={<Link href="/instances" />} nativeButton={false} size="sm">
                 Add your first instance
-              </ActionButton>
+              </Button>
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {health.map((instance) => (
-              <Card key={instance.id} size="sm">
-                <CardContent className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <span className="truncate text-sm text-foreground">
-                      {instance.label}
-                    </span>
-                    <Data className="text-muted-foreground">
-                      {instance.ok
-                        ? `v${instance.version ?? "unknown"}`
-                        : (instance.message ?? "Unreachable.")}
-                    </Data>
-                  </div>
-                  <span
-                    className={
-                      instance.ok
-                        ? "shrink-0 text-xs text-positive"
-                        : "shrink-0 text-xs text-destructive"
-                    }
-                  >
-                    {instance.ok ? "Reachable" : "Unreachable"}
-                  </span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Panel>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Instance</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead className="w-px text-right">State</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {health.map((instance) => (
+                  <TableRow key={instance.id}>
+                    <TableCell className="font-bold">{instance.label}</TableCell>
+                    <TableCell>
+                      <Data className="text-muted-foreground">
+                        {instance.ok
+                          ? `v${instance.version ?? "unknown"}`
+                          : (instance.message ?? "Unreachable.")}
+                      </Data>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Label kind={instance.ok ? "success" : "danger"} size="sm">
+                        {instance.ok ? "Reachable" : "Unreachable"}
+                      </Label>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <SectionTitle>Waiting for approval</SectionTitle>
-          <Link href="/requests?status=PENDING" className="text-xs text-brand">
+          <Link
+            href="/requests?status=PENDING"
+            className="text-sm text-primary hover:underline"
+          >
             Open requests
           </Link>
         </div>
@@ -126,34 +154,55 @@ export default async function DashboardPage() {
             hint="Approved and auto-approved titles show up in the activity list below."
           />
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-            {pending.map((item) => (
-              <li key={item.id} className="flex flex-col gap-2 px-3 py-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="text-sm text-foreground">
-                    {item.title}
-                    {item.year ? (
-                      <span className="text-muted-foreground"> ({item.year})</span>
-                    ) : null}
-                  </span>
-                  <Data className="text-muted-foreground">
-                    {item.instance.label} · {formatTimestamp(item.createdAt)}
-                  </Data>
-                </div>
-                <StatusRail status={item.status} />
-                <p className="text-xs text-muted-foreground">
-                  Asked by{" "}
-                  {item.subscriptions
-                    .map((s) => s.telegramUser.displayName)
-                    .join(", ") || "someone who has since been removed"}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <Panel>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-48">Title</TableHead>
+                  <TableHead className="min-w-40">Progress</TableHead>
+                  <TableHead className="min-w-36">Asked by</TableHead>
+                  <TableHead className="min-w-44">Instance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pending.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="flex items-start gap-2.5">
+                        <Poster url={item.posterUrl} className="h-12 w-8" />
+                        <span className="min-w-0 font-bold">
+                          {item.title}
+                          {item.year ? (
+                            <span className="font-normal text-muted-foreground">
+                              {" "}
+                              ({item.year})
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusProgress status={item.status} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.subscriptions
+                        .map((s) => s.telegramUser.displayName)
+                        .join(", ") || "someone who has since been removed"}
+                    </TableCell>
+                    <TableCell>
+                      <Data className="text-muted-foreground">
+                        {item.instance.label} · {formatTimestamp(item.createdAt)}
+                      </Data>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2">
         <SectionTitle>Recent activity</SectionTitle>
         {events.length === 0 ? (
           <EmptyState
@@ -161,7 +210,8 @@ export default async function DashboardPage() {
             hint="Radarr and Sonarr report progress through the webhook. Add it from the instance page, then press Test."
             action={
               <Button
-                render={<Link href="/instances" />} nativeButton={false}
+                render={<Link href="/instances" />}
+                nativeButton={false}
                 size="sm"
                 variant="outline"
               >
@@ -170,63 +220,135 @@ export default async function DashboardPage() {
             }
           />
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-            {events.map((event) => (
-              <li
-                key={event.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-3 py-2"
-              >
-                <div className="flex min-w-0 items-baseline gap-2">
-                  <Data className="text-brand">{event.eventType}</Data>
-                  <span className="truncate text-sm text-foreground">
-                    {event.mediaItem?.title ?? "Untracked title"}
-                  </span>
-                </div>
-                <Data className="text-muted-foreground">
-                  {instanceLabels.get(event.instanceId) ?? event.instanceId} ·{" "}
-                  {formatTimestamp(event.receivedAt)}
-                </Data>
-              </li>
-            ))}
-          </ul>
+          <Panel>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-px">Event</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead className="min-w-44 text-right">Instance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell>
+                      <Label kind={eventKind(event.eventType)} size="sm">
+                        {event.eventType}
+                      </Label>
+                    </TableCell>
+                    <TableCell>
+                      <EventTitle
+                        tracked={event.mediaItem?.title ?? null}
+                        fromPayload={payloadTitle(event.payload)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Data className="text-muted-foreground">
+                        {instanceLabels.get(event.instanceId) ?? event.instanceId} ·{" "}
+                        {formatTimestamp(event.receivedAt)}
+                      </Data>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
         )}
       </section>
     </div>
   );
 }
 
-function Counter({
+/**
+ * The title an event is about.
+ *
+ * Most events are for titles nobody asked Askarr for — someone added them in
+ * Radarr, or Radarr upgraded a file on its own. Those are still worth showing
+ * by name; they are just dimmed, because there is no request behind them and
+ * nothing here to act on.
+ */
+function EventTitle({
+  tracked,
+  fromPayload,
+}: {
+  tracked: string | null;
+  fromPayload: string | null;
+}) {
+  if (tracked) return <span>{tracked}</span>;
+  if (fromPayload) {
+    return (
+      <span
+        className="text-muted-foreground"
+        title="Handled on the instance — nobody requested this through Askarr."
+      >
+        {fromPayload}
+      </span>
+    );
+  }
+  return <span className="text-muted-foreground">No title in the payload</span>;
+}
+
+/** A bordered surface holding a table. The one container this app has. */
+function Panel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-surface">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Radarr and Sonarr send these names verbatim, so the set is theirs, not ours.
+ * Anything unrecognised stays neutral rather than being guessed at.
+ */
+function eventKind(eventType: string) {
+  switch (eventType) {
+    case "Download":
+    case "MovieFileImported":
+      return "success" as const;
+    case "Grab":
+      return "primary" as const;
+    case "MovieAdded":
+    case "SeriesAdd":
+      return "queue" as const;
+    default:
+      return "default" as const;
+  }
+}
+
+/** A count and what it counts, on one line. Links through when there is a view. */
+function CountLabel({
   value,
-  label,
+  noun,
+  kind,
   href,
 }: {
   value: number;
-  label: string;
+  noun: string;
+  kind: "warning" | "queue" | "success";
   href?: string;
 }) {
   const body = (
     <>
-      <span className="font-display text-2xl leading-none text-foreground">
+      <Label kind={kind} size="sm">
         {value}
-      </span>
-      <span className="text-xs text-muted-foreground">{label}</span>
+      </Label>
+      <span className="text-sm text-muted-foreground">{noun}</span>
     </>
   );
 
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="flex flex-col gap-2 rounded-lg border border-border bg-card px-4 py-4 transition-colors hover:border-brand"
-      >
-        {body}
-      </Link>
-    );
+  if (!href) {
+    return <span className="inline-flex items-center gap-1.5">{body}</span>;
   }
-
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card px-4 py-4">
-      {body}
-    </div>
+    <Link href={href} className="group inline-flex items-center gap-1.5 rounded-sm">
+      <Label kind={kind} size="sm">
+        {value}
+      </Label>
+      <span className="text-sm text-muted-foreground group-hover:text-foreground">
+        {noun}
+      </span>
+    </Link>
   );
 }

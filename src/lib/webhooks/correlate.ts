@@ -32,6 +32,24 @@ export function externalRef(payload: ArrWebhookPayload): ExternalRef | null {
   return null;
 }
 
+/**
+ * The title the instance called it, straight out of the stored payload.
+ *
+ * Most events are for titles nobody requested through Askarr — someone added
+ * them in Radarr directly — so there is no MediaItem to read a name from. The
+ * payload has one anyway, and showing "Untracked title" instead of it throws
+ * away the one thing that makes the activity list readable.
+ */
+export function payloadTitle(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const { movie, series } = payload as {
+    movie?: { title?: unknown };
+    series?: { title?: unknown };
+  };
+  const title = movie?.title ?? series?.title;
+  return typeof title === "string" && title.trim() ? title.trim() : null;
+}
+
 /** Null when nothing matches: an admin may add titles the bot never requested. */
 export async function correlateMediaItem(
   instanceId: string,

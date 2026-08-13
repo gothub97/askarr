@@ -1,7 +1,6 @@
-import Link from "next/link";
 import type * as React from "react";
-import { AdminNav, SignOutButton } from "@/components/admin/admin-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AdminShell } from "@/components/admin/admin-shell";
+import { countPendingRequests } from "@/lib/requests";
 import { requireSession } from "@/lib/session";
 
 /**
@@ -12,37 +11,16 @@ import { requireSession } from "@/lib/session";
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await requireSession();
+  // The pending count rides in the sidebar on every page, so it is fetched
+  // here rather than per page. It is the one number an operator has to act on.
+  const [session, pendingCount] = await Promise.all([
+    requireSession(),
+    countPendingRequests(),
+  ]);
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-3 py-2 sm:gap-4 sm:px-6">
-          <Link
-            href="/dashboard"
-            className="rounded-sm font-display text-base tracking-tight text-foreground"
-          >
-            Askarr
-          </Link>
-
-          <AdminNav />
-
-          <div className="ml-auto flex items-center gap-1">
-            <span
-              className="hidden max-w-40 truncate text-xs text-muted-foreground lg:inline"
-              title={session.user.email}
-            >
-              {session.user.email}
-            </span>
-            <ThemeToggle />
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-6 sm:px-6">
-        {children}
-      </main>
-    </div>
+    <AdminShell email={session.user.email} pendingCount={pendingCount}>
+      {children}
+    </AdminShell>
   );
 }

@@ -4,7 +4,6 @@ import { PlusIcon, TriangleAlertIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { CopyButton } from "@/components/admin/copy-button";
 import { Data } from "@/components/admin/data";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -92,10 +91,10 @@ export function InstancesManager({
       )}
 
       <div className="flex justify-end">
-        <ActionButton onClick={openCreate}>
+        <Button onClick={openCreate}>
           <PlusIcon />
           Add instance
-        </ActionButton>
+        </Button>
       </div>
 
       {instances.length === 0 ? (
@@ -103,9 +102,9 @@ export function InstancesManager({
           title="No instance is connected yet."
           hint="Askarr pushes every approved title to a Radarr or Sonarr instance. Connect one to get started."
           action={
-            <ActionButton size="sm" onClick={openCreate}>
+            <Button size="sm" onClick={openCreate}>
               Add your first instance
-            </ActionButton>
+            </Button>
           }
         />
       ) : (
@@ -116,7 +115,7 @@ export function InstancesManager({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-base text-foreground">
+                      <span className="text-xl text-foreground">
                         {instance.label}
                       </span>
                       <Badge variant="outline">{instance.kind}</Badge>
@@ -205,7 +204,7 @@ export function InstancesManager({
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd>
         <Data className="break-all text-foreground">{value}</Data>
       </dd>
@@ -246,9 +245,9 @@ function WebhookPanel({ instance }: { instance: PublicInstance }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-3">
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">Webhook URL</span>
+        <span className="text-sm text-muted-foreground">Webhook URL</span>
         <CopyButton
           value={instance.webhookUrl}
           label="Copy URL"
@@ -258,15 +257,15 @@ function WebhookPanel({ instance }: { instance: PublicInstance }) {
       <Data className="break-all text-foreground">{instance.webhookUrl}</Data>
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        <ActionButton size="sm" disabled={pending} onClick={configure}>
+        <Button size="sm" disabled={pending} onClick={configure}>
           Set the webhook up
-        </ActionButton>
-        <span className="text-xs text-muted-foreground">
+        </Button>
+        <span className="text-sm text-muted-foreground">
           Askarr registers it on the instance itself.
         </span>
       </div>
 
-      <p className="pt-1 text-xs text-muted-foreground">
+      <p className="pt-1 text-sm text-muted-foreground">
         Or do it by hand: in{" "}
         {instance.kind === "RADARR" ? "Radarr" : "Sonarr"}, open Settings &gt;
         Connect &gt; add a Webhook, paste the URL, tick these events, then press

@@ -5,9 +5,9 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { Data } from "@/components/admin/data";
-import { StatusRail } from "@/components/status-rail";
+import { Poster } from "@/components/poster";
+import { StatusProgress } from "@/components/progress-bar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +49,7 @@ export interface RequestRow {
   year: number | null;
   kind: MediaKind;
   externalId: number;
+  posterUrl: string | null;
   status: MediaStatus;
   statusReason: string | null;
   instanceLabel: string;
@@ -91,7 +92,7 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
 
   return (
     <>
-      <div className="rounded-lg border border-border">
+      <div className="overflow-hidden rounded-md border border-border bg-surface">
         <Table>
           <TableHeader>
             <TableRow>
@@ -106,47 +107,53 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="align-top whitespace-normal">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-foreground">
-                      {row.title}
-                      {row.year ? (
-                        <span className="text-muted-foreground"> ({row.year})</span>
-                      ) : null}
-                    </span>
-                    <Data className="text-muted-foreground">
-                      {row.kind === "MOVIE" ? "tmdbId" : "tvdbId"} {row.externalId}
-                    </Data>
+                <TableCell>
+                  <div className="flex items-start gap-2.5">
+                    <Poster url={row.posterUrl} className="h-12 w-8" />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-bold text-foreground">
+                        {row.title}
+                        {row.year ? (
+                          <span className="font-normal text-muted-foreground">
+                            {" "}
+                            ({row.year})
+                          </span>
+                        ) : null}
+                      </span>
+                      <Data className="text-muted-foreground">
+                        {row.kind === "MOVIE" ? "tmdbId" : "tvdbId"} {row.externalId}
+                      </Data>
+                    </div>
                   </div>
                 </TableCell>
 
-                <TableCell className="align-top whitespace-normal">
-                  <StatusRail status={row.status} />
+                <TableCell>
+                  <StatusProgress status={row.status} />
                   {row.statusReason && (
-                    <p className="pt-1 text-xs text-muted-foreground">
+                    <p className="pt-1 text-sm text-muted-foreground">
                       {row.statusReason}
                     </p>
                   )}
                 </TableCell>
 
-                <TableCell className="align-top whitespace-normal text-sm text-muted-foreground">
+                <TableCell className="text-base text-muted-foreground">
                   {row.requesters.length > 0
                     ? row.requesters.join(", ")
                     : "No subscriber left"}
                 </TableCell>
 
-                <TableCell className="align-top whitespace-normal">
-                  <span className="text-sm text-foreground">{row.instanceLabel}</span>
+                <TableCell>
+                  <span className="text-base text-foreground">{row.instanceLabel}</span>
                 </TableCell>
 
-                <TableCell className="align-top">
+                <TableCell >
                   <Data className="text-muted-foreground">{row.createdAt}</Data>
                 </TableCell>
 
                 <TableCell className="align-top text-right">
                   <div className="flex items-center justify-end gap-1">
                     {row.status === "PENDING" && (
-                      <ActionButton
+                      <Button
                         size="sm"
                         disabled={pending}
                         onClick={() =>
@@ -158,7 +165,7 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
                         }
                       >
                         Approve
-                      </ActionButton>
+                      </Button>
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -246,7 +253,7 @@ export function RequestsTable({ rows }: { rows: RequestRow[] }) {
               placeholder="Already scheduled for next month."
               onChange={(event) => setReason(event.target.value)}
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               Optional · {reason.length}/280
             </span>
           </div>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ActionButton } from "@/components/admin/action-button";
 import { formatTimestamp } from "@/components/admin/data";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
@@ -7,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getQuotaState } from "@/lib/quota";
 import { listUserRequests } from "@/lib/requests";
 import { UsersTable, type TelegramUserRow } from "./users-table";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +59,9 @@ export default async function UsersPage() {
           title="Nobody has talked to the bot yet."
           hint="People appear here as guests the first time they message the bot in an allowed group."
           action={
-            <ActionButton render={<Link href="/chats" />} nativeButton={false} size="sm">
+            <Button render={<Link href="/chats" />} nativeButton={false} size="sm">
               Allow a group
-            </ActionButton>
+            </Button>
           }
         />
       ) : (

@@ -153,7 +153,7 @@ export function StepInstance({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">
+        <CardTitle className="text-xl">
           Connect the first instance
         </CardTitle>
         <CardDescription>
@@ -238,7 +238,7 @@ export function StepInstance({
               invalidateProbe();
             }}
           />
-          <p id="instance-api-key-hint" className="text-xs text-muted-foreground">
+          <p id="instance-api-key-hint" className="text-sm text-muted-foreground">
             Settings → General → API Key, on the instance.
           </p>
         </div>
@@ -248,7 +248,7 @@ export function StepInstance({
             <Label htmlFor="instance-self-signed">
               Allow self-signed certificate
             </Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Turn this on for an HTTPS instance with its own certificate.
             </p>
           </div>
@@ -343,7 +343,7 @@ export function StepInstance({
                       <SelectItem key={folder.id} value={folder.path}>
                         <span className="font-data">{folder.path}</span>
                         {free && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             {free}
                           </span>
                         )}

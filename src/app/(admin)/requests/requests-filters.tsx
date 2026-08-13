@@ -70,7 +70,7 @@ export function RequestsFilters({
       }}
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="request-search" className="text-xs text-muted-foreground">
+        <Label htmlFor="request-search" className="text-sm text-muted-foreground">
           Search a title
         </Label>
         <div className="flex gap-1.5">
@@ -133,7 +133,7 @@ function FilterSelect({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-sm text-muted-foreground">
         {label}
       </Label>
       <Select

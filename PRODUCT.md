@@ -83,6 +83,21 @@ Open decisions: none recorded.
 Name: **Askarr**. It is an *arr and sits in that family's naming and
 conventions.
 
+Visual world: the **\*arr interface language**, pinned by the user and executed
+as convention rather than reinterpreted. **Radarr and Sonarr are the named craft
+bar** — an operator has one of them open in the next tab, and Askarr has to look
+like it belongs there. That means their three-value grey chrome, their dense
+14px register, their square labels, and their two-tone accenting: a brand hue on
+nav and hovers, a separate blue on buttons and links.
+
+Askarr's brand hue is **amber `#ff8c2b`** — one accent for the whole product;
+Radarr and Sonarr instances are told apart by name, never by colour. Because
+amber neighbours the family's warning orange, warning moves to the *arr gold
+`#f9be03`, and the brand hue is confined to chrome (nav border, hover, logo,
+focus) while warning only ever fills a label or a button.
+
+Typeface: **Lato**, pinned by the user.
+
 Voice: plain language to requesters, technical vocabulary confined to the back
 office. Labels in the imperative. Errors say what happened and how to fix it,
 without apologising. An action keeps one name through a whole flow.

@@ -1,58 +1,27 @@
 "use client";
 
-import { Film, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
  * The small shared parts of the Mini App shell.
  *
- * Flat and quiet by design: no shadows, no gradients, one hairline border. The
- * status rail is the only element allowed to decorate anything.
+ * These share the back office's shapes — 2px chips, 4px everything else, one
+ * hairline border, no shadows — but not its palette. Inside Telegram the
+ * colours come from `--tg-theme-*`, so this surface matches whatever client
+ * the requester is running rather than matching Radarr, which they have never
+ * seen. `globals.css` holds that mapping.
  */
 
 /**
- * Posters come from the operator's own Radarr/Sonarr, which proxy TMDB and
- * TheTVDB. The hosts are unknown at build time, so next/image cannot be used
- * here and a plain <img> is the correct tool.
+ * A whole pane with nothing in it — centred, no border, filling the screen.
+ *
+ * Deliberately not the back office's EmptyState, which is a bordered panel
+ * sitting among other panels. Same idea, different problem: this one is the
+ * only thing on a phone screen.
  */
-export function Poster({
-  url,
-  className,
-}: {
-  url: string | null;
-  className?: string;
-}) {
-  const shared = "shrink-0 overflow-hidden rounded-sm bg-muted";
-  if (!url) {
-    return (
-      <div
-        className={cn(
-          shared,
-          "flex items-center justify-center text-muted-foreground",
-          className,
-        )}
-        aria-hidden
-      >
-        <Film className="size-4" />
-      </div>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      // Decorative: the title always sits next to it as real text.
-      alt=""
-      loading="lazy"
-      decoding="async"
-      className={cn(shared, "object-cover", className)}
-    />
-  );
-}
-
-/** Empty states always name the next action rather than reporting a void. */
-export function EmptyState({
+export function EmptyPane({
   title,
   action,
 }: {
@@ -61,7 +30,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <p className="text-sm text-muted-foreground">{title}</p>
+      <p className="text-base text-muted-foreground">{title}</p>
       {action}
     </div>
   );
@@ -82,9 +51,11 @@ export function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 rounded-full border px-3 py-1 text-xs transition-colors",
+        // Square, like every other chip in the system. A capsule here would be
+        // the one rounded thing in the app.
+        "shrink-0 rounded-sm border px-2.5 py-1 text-sm transition-colors",
         active
-          ? "border-brand text-brand"
+          ? "border-brand bg-brand/10 text-brand"
           : "border-border text-muted-foreground",
       )}
     >
@@ -119,7 +90,7 @@ export function Segmented<T extends string>({
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "flex-1 px-2 py-2 text-xs transition-colors",
+            "flex-1 px-2 py-2 text-sm transition-colors",
             index > 0 && "border-l border-border",
             value === option.value
               ? "bg-secondary text-foreground"
@@ -136,7 +107,7 @@ export function Segmented<T extends string>({
 /** A technical identifier reads as data, never as prose. */
 export function DataTag({ children }: { children: ReactNode }) {
   return (
-    <span className="font-data text-xs text-muted-foreground">{children}</span>
+    <span className="font-data text-sm text-muted-foreground">{children}</span>
   );
 }
 
@@ -197,7 +168,7 @@ export function Sheet({
         className="relative max-h-[85dvh] overflow-y-auto rounded-t-xl border-t border-border bg-card pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-border bg-card px-4 py-3">
-          <h2 id={titleId} className="font-display text-lg leading-tight">
+          <h2 id={titleId} className="text-xl leading-tight">
             {title}
           </h2>
           <button
@@ -236,7 +207,7 @@ export function ListSkeleton({ rows = 3 }: { rows?: number }) {
 /** Inline failure copy. Never a stack trace, never a status code. */
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <p role="alert" className="px-1 py-3 text-sm text-destructive">
+    <p role="alert" className="px-1 py-3 text-base text-destructive">
       {message}
     </p>
   );

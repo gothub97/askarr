@@ -3,17 +3,17 @@
 import type { MediaStatus } from "@prisma/client";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { StatusRail } from "@/components/status-rail";
+import { StatusProgress } from "@/components/progress-bar";
 import { MiniAppApiError, type MiniAppApi } from "./client";
 import {
   Chip,
   DataTag,
-  EmptyState,
+  EmptyPane,
   ErrorNote,
   ListSkeleton,
-  Poster,
-} from "./pieces";
+  } from "./pieces";
 import type { RequestDto } from "./types";
+import { Poster } from "@/components/poster";
 
 /**
  * Tab 1 — what this person has asked for, and how far along it is.
@@ -106,7 +106,7 @@ export function RequestsTab({
       {requests === null && !error && <ListSkeleton />}
 
       {requests !== null && requests.length === 0 && !error && (
-        <EmptyState
+        <EmptyPane
           title={
             filterId === "all"
               ? "No requests yet."
@@ -116,7 +116,7 @@ export function RequestsTab({
             <button
               type="button"
               onClick={onSearch}
-              className="text-sm text-brand underline underline-offset-4"
+              className="text-base text-brand underline underline-offset-4"
             >
               Search for something to watch
             </button>
@@ -141,7 +141,7 @@ function RequestRow({ request }: { request: RequestDto }) {
       <Poster url={request.posterUrl} className="h-[66px] w-11" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm text-foreground">{request.title}</p>
+          <p className="truncate text-base text-foreground">{request.title}</p>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <DataTag>
               {request.year ?? "—"} · {request.instanceLabel}
@@ -152,10 +152,10 @@ function RequestRow({ request }: { request: RequestDto }) {
           </p>
         </div>
 
-        <StatusRail status={request.status} />
+        <StatusProgress status={request.status} />
 
         {request.statusReason && (
-          <p className="text-xs text-muted-foreground">{request.statusReason}</p>
+          <p className="text-sm text-muted-foreground">{request.statusReason}</p>
         )}
 
         <DataTag>{request.requestedAt.slice(0, 10)}</DataTag>

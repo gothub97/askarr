@@ -19,12 +19,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-start gap-2 rounded-lg border border-dashed border-border px-4 py-6",
+        "flex flex-col items-start gap-2 rounded-md border border-border bg-surface px-4 py-5",
         className,
       )}
     >
-      <p className="text-sm text-foreground">{title}</p>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      <p className="text-base text-foreground">{title}</p>
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
       {action && <div className="pt-1">{action}</div>}
     </div>
   );

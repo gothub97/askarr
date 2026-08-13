@@ -131,8 +131,8 @@ function ReadyShell({
     <Frame>
       <header className="sticky top-0 z-20 border-b border-border bg-background px-4 py-3">
         <div className="flex items-baseline justify-between gap-3">
-          <h1 className="font-display text-lg">Askarr</h1>
-          <p className="truncate text-xs text-muted-foreground">
+          <h1 className="text-xl">Askarr</h1>
+          <p className="truncate text-sm text-muted-foreground">
             {me.displayName} ·{" "}
             <span className="font-data">
               {me.quota.limit === 0
@@ -145,7 +145,7 @@ function ReadyShell({
 
       <main className="flex-1 px-4 pt-4 pb-28">
         {!me.canRequest && (
-          <p className="mb-4 rounded-md border border-destructive px-3 py-2 text-xs text-destructive">
+          <p className="mb-4 rounded-md border border-destructive px-3 py-2 text-sm text-destructive">
             Your account is blocked. Ask an admin to restore it.
           </p>
         )}
@@ -187,7 +187,7 @@ function ReadyShell({
                   className={cn(
                     // The accent carries the active state as colour and a
                     // hairline, never as a filled background.
-                    "flex w-full flex-col items-center gap-1 border-t-2 px-2 py-2.5 text-xs",
+                    "flex w-full flex-col items-center gap-1 border-t-2 px-2 py-2.5 text-sm",
                     active
                       ? "border-brand text-brand"
                       : "border-transparent text-muted-foreground",
@@ -222,11 +222,11 @@ function OutsideTelegram() {
   return (
     <Frame>
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="font-display text-xl">Askarr</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl">Askarr</h1>
+        <p className="text-base text-muted-foreground">
           This screen only works inside Telegram.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Open your Askarr bot and tap the Mini App button to request a film or
           a series.
         </p>

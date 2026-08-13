@@ -73,7 +73,7 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">Sign in</CardTitle>
+        <CardTitle className="text-xl">Sign in</CardTitle>
         <CardDescription>
           Askarr accounts are created by an administrator.
         </CardDescription>

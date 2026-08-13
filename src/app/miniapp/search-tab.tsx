@@ -7,14 +7,14 @@ import { useState, type FormEvent } from "react";
 import { MiniAppApiError, type MiniAppApi } from "./client";
 import {
   DataTag,
-  EmptyState,
+  EmptyPane,
   ErrorNote,
-  Poster,
   Segmented,
   Sheet,
 } from "./pieces";
 import { haptic } from "./telegram";
 import type { SearchResultDto, SubmitResponseDto } from "./types";
+import { Poster } from "@/components/poster";
 
 /**
  * Tab 2 — the same flow as the bot, with posters instead of a numbered list.
@@ -94,12 +94,12 @@ export function SearchTab({
           enterKeyHint="search"
           autoComplete="off"
           aria-label={kind === "MOVIE" ? "Search a film" : "Search a series"}
-          className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-3 py-2 text-base text-foreground placeholder:text-muted-foreground"
         />
         <button
           type="submit"
           disabled={searching}
-          className="shrink-0 rounded-md border border-brand px-3 py-2 text-sm text-brand disabled:opacity-50"
+          className="shrink-0 rounded-md border border-primary bg-primary px-3 py-2 text-base text-primary-foreground disabled:opacity-65"
         >
           <Search className="size-4" aria-hidden />
           <span className="sr-only">Search</span>
@@ -109,11 +109,11 @@ export function SearchTab({
       {error && <ErrorNote message={error} />}
 
       {results === null && !error && (
-        <EmptyState title="Search a title to request it." />
+        <EmptyPane title="Search a title to request it." />
       )}
 
       {results !== null && results.length === 0 && !error && (
-        <EmptyState title="Nothing matched. Try a different spelling." />
+        <EmptyPane title="Nothing matched. Try a different spelling." />
       )}
 
       {results !== null && results.length > 0 && (
@@ -129,7 +129,7 @@ export function SearchTab({
                   url={result.posterUrl}
                   className="aspect-[2/3] w-full"
                 />
-                <span className="line-clamp-2 text-xs text-foreground">
+                <span className="line-clamp-2 text-sm text-foreground">
                   {result.title}
                 </span>
                 <DataTag>{result.year ?? "—"}</DataTag>
@@ -213,7 +213,7 @@ function DetailSheet({
               {kind === "MOVIE" ? "tmdb" : "tvdb"}:{result.externalId}
             </DataTag>
             {result.alreadyManaged && (
-              <p className="text-xs text-positive">
+              <p className="text-sm text-positive">
                 Already in the library. Requesting adds you to its updates.
               </p>
             )}
@@ -221,14 +221,14 @@ function DetailSheet({
         </div>
 
         {result.overview && (
-          <p className="text-sm text-muted-foreground">{result.overview}</p>
+          <p className="text-base text-muted-foreground">{result.overview}</p>
         )}
 
         {outcome === null && (
           <>
             {instances.length > 1 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs text-muted-foreground">Where</p>
+                <p className="text-sm text-muted-foreground">Where</p>
                 <Segmented
                   label="Where it should go"
                   options={instances.map((instance) => ({
@@ -243,7 +243,7 @@ function DetailSheet({
 
             {kind === "SERIES" && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs text-muted-foreground">How much</p>
+                <p className="text-sm text-muted-foreground">How much</p>
                 <Segmented
                   label="How much of the series"
                   options={[
@@ -259,7 +259,7 @@ function DetailSheet({
                   onChange={setMonitorMode}
                 />
                 {monitorMode === "all" && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     A full series always goes to an admin for approval.
                   </p>
                 )}
@@ -272,7 +272,7 @@ function DetailSheet({
               type="button"
               onClick={() => void confirm()}
               disabled={submitting}
-              className="w-full rounded-md border border-brand px-3 py-3 text-sm text-brand disabled:opacity-50"
+              className="w-full rounded-md border border-primary bg-primary px-3 py-3 text-base text-primary-foreground disabled:opacity-65"
             >
               {submitting ? "Sending…" : "Request it"}
             </button>
@@ -285,8 +285,8 @@ function DetailSheet({
               role="status"
               className={
                 outcome.outcome === "error" || outcome.outcome === "blocked"
-                  ? "text-sm text-destructive"
-                  : "text-sm text-foreground"
+                  ? "text-base text-destructive"
+                  : "text-base text-foreground"
               }
             >
               {outcome.message}
@@ -294,7 +294,7 @@ function DetailSheet({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-md border border-border px-3 py-3 text-sm text-foreground"
+              className="w-full rounded-md border border-border px-3 py-3 text-base text-foreground"
             >
               Done
             </button>

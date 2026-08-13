@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { Data } from "@/components/admin/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -150,7 +149,7 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
 
   return (
     <>
-      <div className="rounded-lg border border-border">
+      <div className="overflow-hidden rounded-md border border-border bg-surface">
         <Table>
           <TableHeader>
             <TableRow>
@@ -164,16 +163,16 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
           <TableBody>
             {chats.map((chat) => (
               <TableRow key={chat.id}>
-                <TableCell className="align-top whitespace-normal">
+                <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-foreground">
+                    <span className="text-base text-foreground">
                       {chat.title ?? "Untitled group"}
                     </span>
                     <Data className="text-muted-foreground">{chat.chatId}</Data>
                   </div>
                 </TableCell>
 
-                <TableCell className="align-top whitespace-normal">
+                <TableCell>
                   <div className="flex flex-col gap-3">
                     {PURPOSES.map((purpose) => {
                       const dirty =
@@ -183,7 +182,7 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                         // input for width and ends up sitting under it.
                         <div key={purpose} className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="w-20 shrink-0 text-xs text-foreground">
+                            <span className="w-20 shrink-0 text-sm text-foreground">
                               {PURPOSE_LABEL[purpose]}
                             </span>
                           <Input
@@ -210,7 +209,7 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                               Save
                             </Button>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             {PURPOSE_HINT[purpose]}
                           </span>
                         </div>
@@ -219,15 +218,15 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                   </div>
                   {PURPOSES.some((p) => chat[PURPOSE_FIELD[p]] === null) && (
                     <div className="flex flex-col gap-1 pt-3">
-                      <ActionButton
+                      <Button
                         size="sm"
                         className="self-start"
                         disabled={pending}
                         onClick={() => createTopics(chat)}
                       >
                         Create the missing topics
-                      </ActionButton>
-                      <span className="text-xs text-muted-foreground">
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
                         Askarr makes them in the group and fills the ids in.
                         Telegram offers no way to list topics that already
                         exist, so those have to be pasted below.
@@ -235,18 +234,18 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                     </div>
                   )}
 
-                  <span className="block pt-2 text-xs text-muted-foreground">
+                  <span className="block pt-2 text-sm text-muted-foreground">
                     Empty posts in the group's main thread. To find a topic
                     id, open the topic in Telegram, copy its link, and take the
                     last number.
                   </span>
                 </TableCell>
 
-                  <TableCell className="align-top">
+                  <TableCell >
                     <Data className="text-muted-foreground">{chat.createdAt}</Data>
                   </TableCell>
 
-                  <TableCell className="align-top">
+                  <TableCell >
                     <Switch
                       checked={chat.enabled}
                       disabled={pending}

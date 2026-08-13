@@ -3,14 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * A tinted panel with a 1px border in the kind's colour — the family's alert,
+ * which is a Bootstrap descendant. The tint is what carries the meaning; a
+ * thick coloured left edge is a different design language's habit.
+ */
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 rounded-lg border px-2.5 py-2 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+  "group/alert relative grid w-full gap-0.5 rounded-md border px-3 py-2 text-left text-base has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-card text-card-foreground",
+        default: "border-border bg-surface text-foreground",
         destructive:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+          "border-destructive/50 bg-destructive/10 text-destructive *:data-[slot=alert-description]:text-destructive *:[svg]:text-current",
+        warning:
+          "border-warning-ink/50 bg-warning/10 text-warning-ink *:data-[slot=alert-description]:text-warning-ink",
+        success:
+          "border-positive/50 bg-positive/10 text-positive *:data-[slot=alert-description]:text-positive",
+        info: "border-primary/50 bg-primary/10 text-primary *:data-[slot=alert-description]:text-primary",
       },
     },
     defaultVariants: {

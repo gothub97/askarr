@@ -75,7 +75,7 @@ function SetupAlreadyDone() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">
+        <CardTitle className="text-xl">
           Setup is already done
         </CardTitle>
         <CardDescription>

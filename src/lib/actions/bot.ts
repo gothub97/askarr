@@ -9,7 +9,6 @@ import {
 } from "../bot-control";
 import {
   type BotTokenState,
-  clearBotToken,
   getBotTokenState,
   setBotToken,
 } from "../bot-token";
@@ -33,8 +32,6 @@ export interface BotActionResult {
 export interface BotOverview {
   token: BotTokenState;
   status: BotStatus;
-  /** Present when the environment holds a token that the database overrides. */
-  envSeedPresent: boolean;
 }
 
 const tokenSchema = z.object({
@@ -56,7 +53,6 @@ export async function getBotOverviewAction(): Promise<BotOverview> {
   return {
     token,
     status,
-    envSeedPresent: Boolean(process.env.TELEGRAM_BOT_TOKEN),
   };
 }
 
@@ -138,25 +134,6 @@ export async function saveBotTokenAction(
   return { ok: true, username: resolved.username };
 }
 
-/** Drops the saved token so the environment seed takes over again. */
-export async function revertBotTokenAction(): Promise<BotActionResult> {
-  await assertSession();
-
-  if (!process.env.TELEGRAM_BOT_TOKEN) {
-    return {
-      ok: false,
-      message:
-        "There is no TELEGRAM_BOT_TOKEN to fall back to, so removing this would leave Askarr with no bot.",
-    };
-  }
-
-  await clearBotToken();
-  // The version goes back to 0, which the bot reads as a change and reloads on.
-  await requestBotRestart();
-  revalidatePath("/bot");
-  return { ok: true };
-}
-
 export async function restartBotAction(): Promise<BotActionResult> {
   await assertSession();
   await requestBotRestart();
@@ -170,7 +147,7 @@ export interface DiscoveredChat {
   enabled: boolean;
 }
 
-/** Groups as they are discovered, for the live panel on the Bot page. */
+/** Groups as they are discovered, for the live panel on the Groups page. */
 export async function listDiscoveredChatsAction(): Promise<DiscoveredChat[]> {
   await assertSession();
   const chats = await prisma.telegramChat.findMany({

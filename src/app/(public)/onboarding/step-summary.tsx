@@ -69,7 +69,7 @@ export function StepSummary({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">
+        <CardTitle className="text-xl">
           Check and finish
         </CardTitle>
         <CardDescription>
@@ -88,20 +88,20 @@ export function StepSummary({
         )}
 
         {!summary && !error ? (
-          <p className="text-sm text-muted-foreground">Reading back setup…</p>
+          <p className="text-base text-muted-foreground">Reading back setup…</p>
         ) : (
           <>
             <section className="flex flex-col gap-1.5">
-              <h2 className="text-xs text-muted-foreground">Administrator</h2>
+              <h2 className="text-sm text-muted-foreground">Administrator</h2>
               {admin ? (
-                <p className="text-sm text-foreground">
+                <p className="text-base text-foreground">
                   {admin.name}{" "}
                   <span className="font-data text-muted-foreground">
                     {admin.email}
                   </span>
                 </p>
               ) : (
-                <p className="text-sm text-destructive">
+                <p className="text-base text-destructive">
                   No administrator. Go back to step 1 and create one.
                 </p>
               )}
@@ -110,9 +110,9 @@ export function StepSummary({
             <Separator />
 
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs text-muted-foreground">Instances</h2>
+              <h2 className="text-sm text-muted-foreground">Instances</h2>
               {instances.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                <p className="rounded-md border border-border bg-surface p-3 text-base text-muted-foreground">
                   No instance connected. Askarr will accept no request until
                   you add Radarr or Sonarr from Instances.
                 </p>
@@ -120,18 +120,18 @@ export function StepSummary({
                 instances.map((instance) => (
                   <div
                     key={instance.id}
-                    className="flex flex-col gap-1 rounded-lg border border-border p-3"
+                    className="flex flex-col gap-1 rounded-md border border-border p-3"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-foreground">
+                      <span className="text-base text-foreground">
                         {instance.label}
                       </span>
                       <Badge variant="outline">{instance.kind}</Badge>
                     </div>
-                    <p className="font-data text-xs break-all text-muted-foreground">
+                    <p className="font-data text-sm break-all text-muted-foreground">
                       {instance.baseUrl}
                     </p>
-                    <p className="font-data text-xs break-all text-muted-foreground">
+                    <p className="font-data text-sm break-all text-muted-foreground">
                       {instance.rootFolderPath} · profile{" "}
                       {instance.qualityProfileId}
                     </p>
@@ -143,9 +143,9 @@ export function StepSummary({
             <Separator />
 
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs text-muted-foreground">Allowed groups</h2>
+              <h2 className="text-sm text-muted-foreground">Allowed groups</h2>
               {allowedChats.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                <p className="rounded-md border border-border bg-surface p-3 text-base text-muted-foreground">
                   No group allowed. The bot will stay silent everywhere until
                   you allow one from Telegram groups.
                 </p>
@@ -153,12 +153,12 @@ export function StepSummary({
                 allowedChats.map((chat) => (
                   <div
                     key={chat.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border p-3"
+                    className="flex items-center justify-between gap-2 rounded-md border border-border p-3"
                   >
-                    <span className="truncate text-sm text-foreground">
+                    <span className="truncate text-base text-foreground">
                       {chat.title ?? "Untitled group"}
                     </span>
-                    <span className="font-data text-xs text-muted-foreground">
+                    <span className="font-data text-sm text-muted-foreground">
                       {chat.chatId}
                     </span>
                   </div>

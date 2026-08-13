@@ -42,8 +42,8 @@ export function OnboardingWizard({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-xl text-foreground">Set up Askarr</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl text-foreground">Set up Askarr</h1>
+        <p className="text-base text-muted-foreground">
           Four steps. Two of them can wait.
         </p>
       </div>
@@ -58,16 +58,18 @@ export function OnboardingWizard({
                 aria-current={entry.number === step ? "step" : undefined}
                 className="flex flex-col gap-1.5"
               >
+                {/* The action colour, not the brand amber: amber is chrome
+                    here and never fills anything. */}
                 <div
                   className={cn(
-                    "h-1 rounded-[1px]",
-                    reached ? "bg-brand" : "bg-border",
+                    "h-1.5 rounded-sm",
+                    reached ? "bg-primary-fill" : "bg-muted",
                   )}
                 />
                 {/* Four labels do not fit at 360px; the line below carries them. */}
                 <span
                   className={cn(
-                    "hidden text-xs sm:block",
+                    "hidden text-sm sm:block",
                     entry.number === step
                       ? "text-foreground"
                       : "text-muted-foreground",
@@ -79,7 +81,7 @@ export function OnboardingWizard({
             );
           })}
         </ol>
-        <p className="text-xs text-muted-foreground sm:hidden">
+        <p className="text-sm text-muted-foreground sm:hidden">
           Step {step} of {STEPS.length} — {currentTitle}
         </p>
       </nav>

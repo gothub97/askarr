@@ -3,7 +3,6 @@
 import { ArrKind } from "@prisma/client";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { Data } from "@/components/admin/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -275,10 +274,10 @@ export function InstanceForm({
             </div>
           </Field>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
             <div className="flex flex-col">
               <Label htmlFor="instance-self-signed">Accept a self-signed certificate</Label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 Only for an instance on your own network.
               </span>
             </div>
@@ -301,7 +300,7 @@ export function InstanceForm({
           </div>
 
           {error && (
-            <p className="rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-md border border-destructive/40 px-3 py-2 text-base text-destructive">
               {error}
             </p>
           )}
@@ -374,13 +373,13 @@ export function InstanceForm({
           </Field>
 
           {!probe && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Test the connection to change the profile and the folder.
             </p>
           )}
 
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
               <Label htmlFor="instance-enabled">Enabled</Label>
               <Switch
                 id="instance-enabled"
@@ -388,10 +387,10 @@ export function InstanceForm({
                 onCheckedChange={(checked) => patch({ enabled: checked })}
               />
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
               <div className="flex flex-col">
                 <Label htmlFor="instance-default">Default for this kind</Label>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   Picked automatically when nobody chooses an instance by name.
                 </span>
               </div>
@@ -408,9 +407,9 @@ export function InstanceForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <ActionButton disabled={!canSave || saving} onClick={save}>
+          <Button disabled={!canSave || saving} onClick={save}>
             {editing ? "Save instance" : "Add instance"}
-          </ActionButton>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -432,14 +431,14 @@ function Field({
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+      {hint && <span className="text-sm text-muted-foreground">{hint}</span>}
     </div>
   );
 }
 
 function ReadOnlyValue({ value }: { value: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-border px-2.5 py-1.5">
+    <div className="rounded-md border border-border bg-surface px-2.5 py-1.5">
       <Data className="text-muted-foreground">{value}</Data>
     </div>
   );

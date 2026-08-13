@@ -12,7 +12,7 @@ export function Data({
   ...props
 }: React.ComponentProps<"span">) {
   return (
-    <span className={cn("font-data text-xs", className)} {...props}>
+    <span className={cn("font-data text-sm", className)} {...props}>
       {children}
     </span>
   );

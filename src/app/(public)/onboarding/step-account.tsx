@@ -68,7 +68,7 @@ export function StepAccount({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">
+        <CardTitle className="text-xl">
           Create the administrator
         </CardTitle>
         <CardDescription>
@@ -126,7 +126,7 @@ export function StepAccount({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <p id="admin-password-hint" className="text-xs text-muted-foreground">
+            <p id="admin-password-hint" className="text-sm text-muted-foreground">
               At least {MIN_PASSWORD_LENGTH} characters.
             </p>
           </div>

@@ -163,7 +163,7 @@ export function StepTelegram({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">
+        <CardTitle className="text-xl">
           Allow a Telegram group
         </CardTitle>
         <CardDescription>
@@ -181,22 +181,22 @@ export function StepTelegram({
           </Alert>
         )}
 
-        <div className="rounded-lg border border-border p-3">
-          <p className="text-xs text-muted-foreground">Your bot</p>
+        <div className="rounded-md border border-border p-3">
+          <p className="text-sm text-muted-foreground">Your bot</p>
           {bot ? (
-            <p className="mt-0.5 text-sm text-foreground">
+            <p className="mt-0.5 text-base text-foreground">
               {bot.displayName}{" "}
               <span className="font-data text-muted-foreground">
                 @{bot.username}
               </span>
             </p>
           ) : (
-            <p className="mt-0.5 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-base text-muted-foreground">
               {botError ? "Unknown" : "Resolving…"}
             </p>
           )}
 
-          <ol className="mt-3 flex list-decimal flex-col gap-1 pl-4 text-sm text-muted-foreground">
+          <ol className="mt-3 flex list-decimal flex-col gap-1 pl-4 text-base text-muted-foreground">
             <li>Open your Telegram group.</li>
             <li>
               Add{" "}
@@ -213,13 +213,13 @@ export function StepTelegram({
         <Separator />
 
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium text-foreground">
+          <h2 className="text-base font-medium text-foreground">
             Discovered groups
           </h2>
           {listening && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <RadioIcon
-                className="size-3.5 text-brand motion-safe:animate-pulse"
+                className="size-3.5 text-primary motion-safe:animate-pulse"
                 aria-hidden
               />
               Listening
@@ -230,7 +230,7 @@ export function StepTelegram({
         {/* Groups arrive without a user action, so announce them politely. */}
         <div aria-live="polite" className="flex flex-col gap-2">
           {chats.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+            <p className="rounded-md border border-border bg-surface p-3 text-base text-muted-foreground">
               No group yet. Add the bot to a group and send a message — this
               list updates on its own.
             </p>
@@ -238,13 +238,13 @@ export function StepTelegram({
             chats.map((chat) => (
               <div
                 key={chat.id}
-                className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">
+                  <p className="truncate text-base text-foreground">
                     {chat.title ?? "Untitled group"}
                   </p>
-                  <p className="font-data text-xs text-muted-foreground">
+                  <p className="font-data text-sm text-muted-foreground">
                     {chat.chatId}
                     {chat.threadId !== null && ` · topic ${chat.threadId}`}
                   </p>
@@ -279,7 +279,7 @@ export function StepTelegram({
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="manual-chat-id">Or enter a chat id</Label>
-          <p id="manual-chat-id-hint" className="text-xs text-muted-foreground">
+          <p id="manual-chat-id-hint" className="text-sm text-muted-foreground">
             Use this if the bot cannot report the group itself. Group ids are
             negative.
           </p>
@@ -311,7 +311,7 @@ export function StepTelegram({
             </Button>
           </div>
           {manualError && (
-            <p role="alert" className="text-xs text-destructive">
+            <p role="alert" className="text-sm text-destructive">
               {manualError}
             </p>
           )}

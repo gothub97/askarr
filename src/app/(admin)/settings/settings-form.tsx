@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { updateAppSettingsAction } from "@/lib/actions/settings";
 import type { AppSettings } from "@/lib/settings";
+import { Button } from "@/components/ui/button";
 
 const LANGUAGES: Record<string, string> = {
   en: "English",
@@ -63,7 +63,7 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
           value={quota}
           onChange={(event) => setQuota(event.target.value)}
         />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Given to every new guest. 0 means unlimited. Changing it does not touch
           people who already have a quota.
         </span>
@@ -82,9 +82,9 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
             value={window}
             onChange={(event) => setWindow(event.target.value)}
           />
-          <span className="text-sm text-muted-foreground">minutes</span>
+          <span className="text-base text-muted-foreground">minutes</span>
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Season imports arrive episode by episode. Askarr holds them for this
           long and sends one message instead of twenty.
         </span>
@@ -110,21 +110,21 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           The language the bot replies in.
         </span>
       </div>
 
       {error && (
-        <p className="rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-md border border-destructive/40 px-3 py-2 text-base text-destructive">
           {error}
         </p>
       )}
 
       <div>
-        <ActionButton type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending}>
           Save settings
-        </ActionButton>
+        </Button>
       </div>
     </form>
   );

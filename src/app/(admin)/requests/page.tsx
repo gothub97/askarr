@@ -1,6 +1,5 @@
 import { MediaStatus, type Prisma } from "@prisma/client";
 import Link from "next/link";
-import { ActionButton } from "@/components/admin/action-button";
 import { formatTimestamp } from "@/components/admin/data";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
@@ -83,6 +82,7 @@ export default async function RequestsPage({
     kind: item.kind,
     externalId: item.externalId,
     status: item.status,
+    posterUrl: item.posterUrl,
     statusReason: item.statusReason,
     instanceLabel: item.instance.label,
     requesters: item.subscriptions.map((s) => s.telegramUser.displayName),
@@ -92,7 +92,7 @@ export default async function RequestsPage({
   const filtering = Boolean(search || status || requester || instance);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageHeader
         title="Requests"
         description="Approve, reject or retry what the group has asked for."
@@ -136,9 +136,9 @@ export default async function RequestsPage({
             title="No requests waiting."
             hint="Requests arrive from the Telegram group. Check that the group is allowed and that an instance is connected."
             action={
-              <ActionButton render={<Link href="/chats" />} nativeButton={false} size="sm">
+              <Button render={<Link href="/chats" />} nativeButton={false} size="sm">
                 Allow a group
-              </ActionButton>
+              </Button>
             }
           />
         )
@@ -146,7 +146,7 @@ export default async function RequestsPage({
         <>
           <RequestsTable rows={rows} />
           {totalCount > rows.length && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Showing the {rows.length} most recent of {totalCount}. Narrow the
               search to reach older ones.
             </p>

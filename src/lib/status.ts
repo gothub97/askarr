@@ -1,49 +1,61 @@
 import { MediaStatus } from "@prisma/client";
 
-/** The four notches of the status rail, in order. */
-export const RAIL_STEPS = [
-  "Requested",
-  "Approved",
-  "Grabbed",
-  "Available",
-] as const;
+/**
+ * A request's status, expressed in the *arr vocabulary.
+ *
+ * The family has one semantic set — the `kind` — that every label, button and
+ * progress bar takes. Mapping our seven statuses onto it once, here, is what
+ * keeps a status looking the same wherever it appears.
+ */
+export type StatusKind =
+  | "default"
+  | "primary"
+  | "success"
+  | "warning"
+  | "danger"
+  | "queue";
 
-export type RailStep = (typeof RAIL_STEPS)[number];
-
-/** How far along the rail a status has reached. 0 means "requested only". */
-export function railProgress(status: MediaStatus): number {
+export function statusKind(status: MediaStatus): StatusKind {
   switch (status) {
+    // Waiting on a person, which is the one thing an operator can act on.
     case MediaStatus.PENDING:
-      return 0;
+      return "warning";
+    // The family's purple means "known about, not here yet".
     case MediaStatus.QUEUED:
-      return 1;
+      return "queue";
     case MediaStatus.GRABBED:
-      return 2;
+      return "primary";
     case MediaStatus.AVAILABLE:
     case MediaStatus.ALREADY_HAVE:
-      return 3;
-    // Rejected and failed stop at the first notch; the label carries the rest.
+      return "success";
     case MediaStatus.REJECTED:
     case MediaStatus.FAILED:
-      return 0;
+      return "danger";
   }
 }
 
-export type StatusTone = "waiting" | "progress" | "positive" | "negative";
-
-export function statusTone(status: MediaStatus): StatusTone {
+/**
+ * How far along a request is, 0–100, for the progress bar.
+ *
+ * The four stages behind these numbers are requested, approved, grabbed, here.
+ * Rejected and failed sit at the point they stopped rather than at zero: the
+ * bar shows how far it got, and the label says it is not going further.
+ */
+export function statusProgress(status: MediaStatus): number {
   switch (status) {
     case MediaStatus.PENDING:
-      return "waiting";
+      return 10;
     case MediaStatus.QUEUED:
+      return 40;
     case MediaStatus.GRABBED:
-      return "progress";
+      return 75;
     case MediaStatus.AVAILABLE:
     case MediaStatus.ALREADY_HAVE:
-      return "positive";
+      return 100;
     case MediaStatus.REJECTED:
+      return 10;
     case MediaStatus.FAILED:
-      return "negative";
+      return 40;
   }
 }
 
@@ -64,6 +76,30 @@ export function statusLabel(status: MediaStatus): string {
       return "Failed";
     case MediaStatus.ALREADY_HAVE:
       return "Already in the library";
+  }
+}
+
+/**
+ * The same status as a short label, for a table cell or a chip where the full
+ * sentence would wrap. `statusLabel` stays the long form: it is what the bot
+ * says, and the two must not drift.
+ */
+export function statusShortLabel(status: MediaStatus): string {
+  switch (status) {
+    case MediaStatus.PENDING:
+      return "Waiting";
+    case MediaStatus.REJECTED:
+      return "Rejected";
+    case MediaStatus.QUEUED:
+      return "Searching";
+    case MediaStatus.GRABBED:
+      return "Downloading";
+    case MediaStatus.AVAILABLE:
+      return "Available";
+    case MediaStatus.FAILED:
+      return "Failed";
+    case MediaStatus.ALREADY_HAVE:
+      return "In library";
   }
 }
 

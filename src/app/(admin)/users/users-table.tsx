@@ -4,9 +4,8 @@ import { TelegramRole, type MediaStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ActionButton } from "@/components/admin/action-button";
 import { Data } from "@/components/admin/data";
-import { StatusRail } from "@/components/status-rail";
+import { StatusProgress } from "@/components/progress-bar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -114,7 +113,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
 
   return (
     <>
-      <div className="rounded-lg border border-border">
+      <div className="overflow-hidden rounded-md border border-border bg-surface">
         <Table>
           <TableHeader>
             <TableRow>
@@ -134,9 +133,9 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
 
               return (
                 <TableRow key={user.id}>
-                  <TableCell className="align-top whitespace-normal">
+                  <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-sm text-foreground">
+                      <span className="text-base text-foreground">
                         {user.displayName}
                       </span>
                       <Data className="text-muted-foreground">
@@ -146,7 +145,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
                     </div>
                   </TableCell>
 
-                  <TableCell className="align-top">
+                  <TableCell >
                     <Select
                       items={ROLE_LABELS}
                       value={draft.role}
@@ -170,7 +169,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
                     </Select>
                   </TableCell>
 
-                  <TableCell className="align-top">
+                  <TableCell >
                     <Input
                       type="number"
                       min={0}
@@ -183,18 +182,18 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
                         patch(user, { quota: event.target.value })
                       }
                     />
-                    <span className="block pt-1 text-xs text-muted-foreground">
+                    <span className="block pt-1 text-sm text-muted-foreground">
                       0 = unlimited
                     </span>
                   </TableCell>
 
-                  <TableCell className="align-top">
+                  <TableCell >
                     <Data className="text-foreground">
                       {user.quotaPerMonth === 0
                         ? `${user.quotaUsed} / ∞`
                         : `${user.quotaUsed} / ${user.quotaPerMonth}`}
                     </Data>
-                    <span className="block pt-1 text-xs text-muted-foreground">
+                    <span className="block pt-1 text-sm text-muted-foreground">
                       rolling 30 days
                     </span>
                   </TableCell>
@@ -208,13 +207,13 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
                       >
                         History
                       </Button>
-                      <ActionButton
+                      <Button
                         size="sm"
                         disabled={!dirty || pending}
                         onClick={() => save(user)}
                       >
                         Save
-                      </ActionButton>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -241,7 +240,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
           </DialogHeader>
 
           {history && history.history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Nothing requested yet.
             </p>
           ) : (
@@ -249,7 +248,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
               {history?.history.map((request) => (
                 <li key={request.id} className="flex flex-col gap-2 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <span className="text-sm text-foreground">
+                    <span className="text-base text-foreground">
                       {request.title}
                       {request.year ? (
                         <span className="text-muted-foreground">
@@ -262,7 +261,7 @@ export function UsersTable({ users }: { users: TelegramUserRow[] }) {
                       {request.instanceLabel} · {request.createdAt}
                     </Data>
                   </div>
-                  <StatusRail status={request.status} />
+                  <StatusProgress status={request.status} size="sm" showCaption={false} />
                 </li>
               ))}
             </ul>

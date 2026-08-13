@@ -46,11 +46,13 @@ export function ThemeToggle({ className }: { className?: string }) {
       role="group"
       aria-label="Colour theme"
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5",
+        // This control only ever sits on the dark chrome, in either theme, so
+        // it is coloured against the chrome rather than against the page.
+        "inline-flex shrink-0 items-center rounded-md border border-white/15",
         className,
       )}
     >
-      {OPTIONS.map(({ value, label, Icon }) => {
+      {OPTIONS.map(({ value, label, Icon }, index) => {
         const active = mounted && current === value;
         return (
           <button
@@ -60,12 +62,15 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-pressed={active}
             onClick={() => setTheme(value)}
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded-md transition-colors",
-              "hover:bg-muted",
-              active ? "bg-muted text-brand" : "text-muted-foreground",
+              "inline-flex size-6 items-center justify-center transition-colors first:rounded-l-[3px] last:rounded-r-[3px]",
+              index > 0 && "border-l border-white/15",
+              "hover:bg-white/10",
+              active
+                ? "bg-white/10 text-sidebar-primary"
+                : "text-sidebar-foreground/70",
             )}
           >
-            <Icon className="size-4" aria-hidden />
+            <Icon className="size-3.5" aria-hidden />
           </button>
         );
       })}
