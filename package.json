@@ -11,7 +11,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

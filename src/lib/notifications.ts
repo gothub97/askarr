@@ -60,8 +60,6 @@ export interface DrainResult {
 
 // ------------------------------------------------------------------ messages
 
-type NotifiableItem = Pick<MediaItem, "id" | "kind" | "title" | "year">;
-
 /** Titles are user data and go through escapeHtml before touching the markup. */
 function titleHtml(item: Pick<MediaItem, "title" | "year">): string {
   const year = item.year ? ` (${item.year})` : "";
