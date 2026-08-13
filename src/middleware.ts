@@ -45,10 +45,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
-  // Setup is done: /onboarding must not create a second admin. The route
-  // itself answers 410; redirecting here keeps people out of a dead page.
+  // Setup is done, so the wizard is gone for good: it is the one path that can
+  // mint an administrator, and a second one must never be creatable.
+  //
+  // 410 rather than a redirect to /dashboard, and answered here rather than in
+  // the page, because a page in the App Router cannot set its own status code
+  // (Next only allows 401/403/404 through the access-fallback family). The
+  // wizard's server actions refuse independently — they are addressable by id
+  // and replayable, so sealing the URL alone would not be enough.
   if (pathname === "/onboarding") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return new NextResponse(
+      "Setup is already done. Sign in at /login instead.",
+      {
+        status: 410,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      },
+    );
   }
 
   if (isPublicPath(pathname)) return NextResponse.next();
