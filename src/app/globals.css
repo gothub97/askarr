@@ -15,7 +15,10 @@
  * Three rules explain nearly every value here:
  *
  * 1. Depth is a stack of background values, not a shadow system. Page, chrome,
- *    panel — #202020 / #2a2a2a / #333. Nothing floats.
+ *    panel — #202020 / #2a2a2a / #333. Shadow is reserved for the three things
+ *    that genuinely leave the page: a menu or popover above the content, the
+ *    focus glow on a field, and the progress track's inset recess. Nothing
+ *    else is allowed to float.
  * 2. Accenting is two-tone. A brand hue (gold in Radarr, cyan in Sonarr, amber
  *    here) marks the active nav item, hovers and the logo. A separate blue —
  *    the same blue in both apps — carries buttons and links. `--brand` is
@@ -46,11 +49,20 @@
   --text-lg: 0.9375rem; /* 15 */
   --text-xl: 1rem; /* 16 */
 
+  /*
+   * Body leading is the *arr value verbatim — 1.528571429, which is 21.4px at
+   * 14px. It must match the `line-height` on `body` below, or text inheriting
+   * from the body sets on a different rhythm than text carrying a `text-base`
+   * utility, and the two are impossible to line up in a table cell.
+   *
+   * The two small sizes lead tighter on purpose: they are labels and chips,
+   * where `line-height: 1` is what keeps the box hugging the text.
+   */
   --text-xs--line-height: 1rem;
   --text-sm--line-height: 1.125rem;
-  --text-base--line-height: 1.25rem; /* 20/14, the *arr body rhythm */
-  --text-lg--line-height: 1.375rem;
-  --text-xl--line-height: 1.5rem;
+  --text-base--line-height: 1.528571429;
+  --text-lg--line-height: 1.45;
+  --text-xl--line-height: 1.4;
 
   /* Chrome */
   --color-brand: var(--brand);
@@ -58,6 +70,7 @@
   --color-surface: var(--surface);
   --color-border-strong: var(--border-strong);
   --color-row-hover: var(--row-hover);
+  --color-focus-field: var(--focus-field);
 
   /* Status kinds. These are the whole semantic vocabulary; the Label, the
      progress bar and the buttons all take one of these as a `kind`. */
@@ -167,6 +180,7 @@
   --input: #ffffff;
   --ring: #9a5000;
   --row-hover: #fafbfc;
+  --focus-field: #66afe9;
 
   /* Chrome is theme-independent. These are the dark values, on purpose. */
   --sidebar: #2a2a2a;
@@ -253,6 +267,7 @@
   --input: #333333;
   --ring: #ff8c2b;
   --row-hover: rgba(255, 255, 255, 0.08);
+  --focus-field: #66afe9;
 
   --sidebar: #2a2a2a;
   --sidebar-foreground: #e1e2e3;
@@ -282,7 +297,9 @@
   body {
     @apply bg-background text-foreground;
     font-size: var(--text-base);
-    line-height: 1.528571429; /* 20/14, the *arr body rhythm */
+    /* The *arr body rhythm, verbatim: 21.4px on 14px. Kept in step with
+       --text-base--line-height above; they must not drift. */
+    line-height: 1.528571429;
   }
   html {
     @apply font-sans;

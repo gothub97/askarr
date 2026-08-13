@@ -43,16 +43,20 @@ import "./globals.css";
 /**
  * Lato carries the whole interface; there is no display face.
  *
- * Three real cuts, matching how the *arr apps use Roboto: 300 for the large
- * numbers that would look heavy at 400, 400 for everything, 700 for table
- * headers and emphasis. Lato ships 100/300/400/700/900 — no 500, no 600 — so
- * loading only cuts that exist keeps the browser from synthesising a fake
- * weight, which is what makes a substituted one look smeared.
+ * Two cuts, because two are all this design uses: 400 for everything and 700
+ * for headings, table headers and emphasis. Hierarchy comes from weight and
+ * one size step, never from a display size.
+ *
+ * Lato ships 100/300/400/700/900 — no 500, no 600. Loading only the cuts that
+ * exist keeps the browser from synthesising a fake weight, which is what makes
+ * a substituted one look smeared; `font-medium` is therefore never used here,
+ * because 500 would silently resolve to 400 anyway. A 300 was loaded for a
+ * while for large numbers, and then the design stopped having any.
  */
 const lato = Lato({
   variable: "--font-lato",
   subsets: ["latin"],
-  weight: ["300", "400", "700"],
+  weight: ["400", "700"],
   display: "swap",
 });
 

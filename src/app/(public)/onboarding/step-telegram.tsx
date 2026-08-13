@@ -213,7 +213,7 @@ export function StepTelegram({
         <Separator />
 
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-medium text-foreground">
+          <h2 className="text-base font-bold text-foreground">
             Discovered groups
           </h2>
           {listening && (

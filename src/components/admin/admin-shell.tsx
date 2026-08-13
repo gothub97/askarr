@@ -138,7 +138,7 @@ function HeaderSearch({ onSubmitted }: { onSubmitted?: () => void }) {
           value={term}
           onChange={(event) => setTerm(event.target.value)}
           placeholder="Search titles"
-          className="w-full min-w-0 rounded-md border border-transparent bg-black/25 py-1.5 pr-2 pl-7 text-base text-sidebar-foreground transition-colors outline-none placeholder:text-sidebar-foreground/60 focus-visible:border-[#66afe9] focus-visible:outline-none"
+          className="w-full min-w-0 rounded-md border border-transparent bg-black/25 py-1.5 pr-2 pl-7 text-base text-sidebar-foreground transition-colors outline-none placeholder:text-sidebar-foreground/60 focus-visible:border-focus-field focus-visible:outline-none"
         />
       </div>
     </form>
