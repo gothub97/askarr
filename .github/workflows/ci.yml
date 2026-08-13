@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes the running job pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The Prisma client is generated code that nothing commits, and both the
+      # typecheck and the build import types from it.
+      - run: npx prisma generate
+
+      - run: npm run typecheck
+
+      # Only the tests that need no database. The suite skips the rest unless
+      # ASKARR_TEST_DB=1 and the database name contains "test" — a guard that
+      # exists because the dev database holds real credentials.
+      - run: npm test
+
+      - run: npm run build
+        env:
+          # Not read at build time, but the schema parse wants a valid URL if
+          # anything touches it while prerendering.
+          APP_URL: http://localhost:3000

@@ -1,3 +1,24 @@
+# Askarr — web, bot and Postgres.
+#
+# `docker compose up -d` pulls the published image and starts everything.
+# `docker compose up -d --build` builds from this checkout instead, which is
+# what you want when you are working on the code.
+#
+# `web` and `bot` are the same image with different commands. Building once
+# keeps the two halves on exactly the same code and schema.
+
+x-askarr: &askarr
+  image: ghcr.io/gothub97/askarr:${ASKARR_TAG:-latest}
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  restart: unless-stopped
+  environment: &askarr-env
+    DATABASE_URL: ${DATABASE_URL}
+    APP_URL: ${APP_URL}
+    TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
+    TZ: ${TZ:-UTC}
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -16,24 +37,17 @@ services:
       start_period: 10s
 
   web:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      args:
-        # Next inlines NEXT_PUBLIC_* at build time.
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-    restart: unless-stopped
+    <<: *askarr
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      <<: *askarr-env
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
-      TZ: ${TZ:-Europe/Paris}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${APP_URL}}
+      # Seeds a fresh install only. Once a token is saved in the back office
+      # the database is the source of truth and this is ignored.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     ports:
       - "${WEB_PORT:-3000}:3000"
     # The web process owns migrations; the bot never runs them, so the two
@@ -41,23 +55,15 @@ services:
     command: sh -c "npm run db:migrate && npm run start"
 
   bot:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-    restart: unless-stopped
+    <<: *askarr
     depends_on:
       postgres:
         condition: service_healthy
       web:
         condition: service_started
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
-      TZ: ${TZ:-Europe/Paris}
+      <<: *askarr-env
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     command: npm run start:bot
 
 volumes:
