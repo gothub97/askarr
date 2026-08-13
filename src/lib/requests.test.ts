@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import {
   ArrKind,
-  AudioVersion,
   MediaKind,
   MediaStatus,
   TelegramRole,
   type ArrInstance,
 } from "@prisma/client";
 import { prisma } from "./prisma";
+import { DB_TEST_SKIP, DB_TESTS_ENABLED } from "./test-db";
 import { ensureTelegramUser, submitRequest } from "./requests";
 
 /**
@@ -89,6 +89,7 @@ const SELECTION = {
 };
 
 before(async () => {
+  if (!DB_TESTS_ENABLED) return;
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
@@ -99,6 +100,7 @@ before(async () => {
 });
 
 beforeEach(async () => {
+  if (!DB_TESTS_ENABLED) return;
   if (!databaseUp) return;
   calls = [];
   libraryIds = new Set();
@@ -112,9 +114,8 @@ beforeEach(async () => {
 
   instance = await prisma.arrInstance.create({
     data: {
-      label: "Radarr MULTI (test)",
+      label: "Radarr (test)",
       kind: ArrKind.RADARR,
-      version: AudioVersion.MULTI,
       baseUrl: "https://radarr.test/admin/radarr",
       apiKey: "test-key",
       qualityProfileId: 4,
@@ -125,6 +126,7 @@ beforeEach(async () => {
 });
 
 after(async () => {
+  if (!DB_TESTS_ENABLED) return;
   globalThis.fetch = realFetch;
   if (databaseUp) await prisma.$disconnect();
 });
@@ -168,7 +170,7 @@ function needsDatabase(t: { skip: (reason?: string) => void }): boolean {
   return false;
 }
 
-describe("submitRequest", () => {
+describe("submitRequest", DB_TEST_SKIP, () => {
   // Acceptance: two people requesting the same movie on the same instance
   // produce one MediaItem and two Subscriptions, and both get notified.
   test("two people asking for the same film share one MediaItem", async (t) => {

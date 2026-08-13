@@ -8,6 +8,7 @@ import {
   setBotToken,
 } from "./bot-token";
 import { prisma } from "./prisma";
+import { DB_TEST_SKIP, DB_TESTS_ENABLED } from "./test-db";
 
 /**
  * Needs the dev database, like requests.test.ts. The encryption is only worth
@@ -21,19 +22,21 @@ const OTHER_TOKEN = "987654321:BBanother-fake-token-for-the-test";
 let savedEnv: string | undefined;
 
 before(async () => {
+  if (!DB_TESTS_ENABLED) return;
   savedEnv = process.env.TELEGRAM_BOT_TOKEN;
   process.env.BETTER_AUTH_SECRET ??= "test-secret-for-bot-token-encryption";
   await clearBotToken();
 });
 
 after(async () => {
+  if (!DB_TESTS_ENABLED) return;
   await clearBotToken();
   if (savedEnv === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
   else process.env.TELEGRAM_BOT_TOKEN = savedEnv;
   await prisma.$disconnect();
 });
 
-describe("bot token storage", () => {
+describe("bot token storage", DB_TEST_SKIP, () => {
   test("a saved token round-trips through encryption", async () => {
     await setBotToken(REAL_TOKEN);
     assert.equal(await getActiveBotToken(), REAL_TOKEN);
