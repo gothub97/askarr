@@ -288,9 +288,15 @@ export type SubmitOutcome =
       mediaItem: MediaItem;
       subscription: Subscription;
       status: MediaStatus;
+      note: string | null;
     }
   /** This person had already requested this exact title. */
-  | { kind: "duplicate"; mediaItem: MediaItem; status: MediaStatus }
+  | {
+      kind: "duplicate";
+      mediaItem: MediaItem;
+      status: MediaStatus;
+      note: string | null;
+    }
   | { kind: "blocked" }
   | { kind: "error"; message: string };
 
@@ -343,6 +349,16 @@ export async function submitRequest(
 
   // ---- The title is already tracked: only the subscription is new.
   if (existingItem) {
+    /*
+     * Ask the instance again rather than answering from our own row.
+     *
+     * The stored status is a snapshot taken when the request was made, and
+     * nothing updates it except a webhook — so an install whose webhook was
+     * missing, or briefly down, answers "queued and looking for a release"
+     * about a film that has been sitting on disk for a week. Re-checking on a
+     * repeat request is cheap, happens rarely, and heals the row.
+     */
+    const state = await refreshFromInstance(instance, existingItem);
     const alreadyMine = await prisma.subscription.findUnique({
       where: {
         mediaItemId_telegramUserId: {
@@ -354,8 +370,9 @@ export async function submitRequest(
     if (alreadyMine) {
       return {
         kind: "duplicate",
-        mediaItem: existingItem,
-        status: existingItem.status,
+        mediaItem: state.mediaItem,
+        status: state.mediaItem.status,
+        note: state.note,
       };
     }
 
@@ -369,14 +386,15 @@ export async function submitRequest(
       },
     });
 
-    if (existingItem.status === MediaStatus.ALREADY_HAVE) {
-      return { kind: "already_have", mediaItem: existingItem, subscription };
+    if (state.mediaItem.status === MediaStatus.ALREADY_HAVE) {
+      return { kind: "already_have", mediaItem: state.mediaItem, subscription };
     }
     return {
       kind: "already_requested",
-      mediaItem: existingItem,
+      mediaItem: state.mediaItem,
       subscription,
-      status: existingItem.status,
+      status: state.mediaItem.status,
+      note: state.note,
     };
   }
 
@@ -547,6 +565,66 @@ async function createItemWithSubscription(args: {
 
     return { mediaItem, subscription };
   });
+}
+
+/**
+ * Re-reads a tracked title from the instance and corrects the stored row.
+ *
+ * Returns the item as it now stands, plus a short note explaining anything the
+ * status alone cannot say — chiefly that a title is announced but unreleased,
+ * which is why an otherwise healthy request never produces anything.
+ */
+async function refreshFromInstance(
+  instance: ArrInstance,
+  item: MediaItem,
+): Promise<{ mediaItem: MediaItem; note: string | null }> {
+  let fresh: LookupResult | null = null;
+  try {
+    fresh = await lookupByExternalId(instance, item.externalId);
+  } catch {
+    // The instance being unreachable is not a reason to fail a duplicate
+    // check; answer from the row we have.
+    return { mediaItem: item, note: null };
+  }
+
+  if (!fresh?.alreadyManaged) return { mediaItem: item, note: null };
+
+  const note = describeInstanceState(fresh, instance.label);
+
+  // The instance holds a file but our row never heard about it: the webhook
+  // was missing or down when it landed.
+  const stale =
+    fresh.hasFile &&
+    item.status !== MediaStatus.AVAILABLE &&
+    item.status !== MediaStatus.ALREADY_HAVE;
+
+  if (!stale) return { mediaItem: item, note };
+
+  const mediaItem = await prisma.mediaItem.update({
+    where: { id: item.id },
+    data: {
+      status: MediaStatus.AVAILABLE,
+      statusReason: `Found on ${instance.label} during a later check`,
+    },
+  });
+  return { mediaItem, note };
+}
+
+/** The one thing the instance knows that a MediaStatus cannot express. */
+function describeInstanceState(
+  fresh: LookupResult,
+  instanceLabel: string,
+): string | null {
+  if (fresh.hasFile) return null;
+
+  const status = (fresh.releaseStatus ?? "").toLowerCase();
+  if (status === "announced" || status === "tba" || status === "upcoming") {
+    return `${instanceLabel} has it, but it has not been released yet — there is nothing to find until it is.`;
+  }
+  if (!fresh.monitored) {
+    return `${instanceLabel} has it but is not searching for it.`;
+  }
+  return `${instanceLabel} has it and is still looking for a release.`;
 }
 
 // ---------------------------------------------------------------- approval

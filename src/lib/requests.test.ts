@@ -33,7 +33,10 @@ let calls: { url: string; method: string; body: unknown }[] = [];
  * Managed, holding a file, and being monitored are three separate things, and
  * conflating them is exactly the bug these tests exist to pin.
  */
-let library = new Map<number, { hasFile: boolean; monitored: boolean }>();
+let library = new Map<
+  number,
+  { hasFile: boolean; monitored: boolean; releaseStatus?: string }
+>();
 
 function installFetchStub() {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -58,6 +61,7 @@ function installFetchStub() {
           overview: "An insomniac and a soap salesman.",
           hasFile: held?.hasFile ?? false,
           monitored: held?.monitored ?? false,
+          status: held?.releaseStatus ?? "released",
           images: [{ coverType: "poster", remoteUrl: "https://img/poster.jpg" }],
         },
       ]);
@@ -67,9 +71,22 @@ function installFetchStub() {
       return json({ id: 777, tmdbId: body?.tmdbId, title: body?.title });
     }
 
-    // Reading one movie back, which resumeMovie does before it PUTs.
+    /*
+     * The library record, fetched both by resumeMovie before its PUT and by
+     * lookupMovieByTmdbId once the id says the library holds the title —
+     * /movie/lookup does not carry hasFile, so this is where truth lives.
+     */
     if (/\/api\/v3\/movie\/\d+$/.test(parsed.pathname) && method === "GET") {
-      return json({ id: 4242, tmdbId: 550, title: "Fight Club", monitored: false });
+      const held = library.get(550);
+      return json({
+        id: 4242,
+        tmdbId: 550,
+        title: "Fight Club",
+        year: 1999,
+        hasFile: held?.hasFile ?? false,
+        monitored: held?.monitored ?? false,
+        status: held?.releaseStatus ?? "released",
+      });
     }
     if (/\/api\/v3\/movie\/\d+$/.test(parsed.pathname) && method === "PUT") {
       return json({ ...(body as object), id: 4242 });
@@ -285,6 +302,54 @@ describe("submitRequest", DB_TEST_SKIP, () => {
 
     const item = await prisma.mediaItem.findFirstOrThrow();
     assert.equal(item.status, MediaStatus.QUEUED);
+  });
+
+  /*
+   * A stored status is a snapshot, and only a webhook ever moves it. An
+   * install whose webhook was missing when the file landed would otherwise
+   * keep answering "queued and looking for a release" about a film that has
+   * been on disk for a week.
+   */
+  test("asking again heals a status the missing webhook never updated", async (t) => {
+    if (!needsDatabase(t)) return;
+    const ada = await makeUser(TelegramRole.ADMIN, 22n);
+
+    // First request: not on the instance yet, so it is added and queued.
+    const first = await submit(ada);
+    assert.equal(first.kind, "queued");
+    const before = await prisma.mediaItem.findFirstOrThrow();
+    assert.equal(before.status, MediaStatus.QUEUED);
+
+    // It lands, but no webhook ever tells Askarr.
+    library.set(550, { hasFile: true, monitored: true });
+
+    const second = await submit(ada);
+
+    assert.equal(second.kind, "duplicate");
+    const after = await prisma.mediaItem.findFirstOrThrow();
+    assert.equal(
+      after.status,
+      MediaStatus.AVAILABLE,
+      "the row must be corrected from what the instance actually holds",
+    );
+  });
+
+  test("an announced film says so instead of claiming to be looking", async (t) => {
+    if (!needsDatabase(t)) return;
+    const ada = await makeUser(TelegramRole.ADMIN, 23n);
+    await submit(ada);
+
+    // Present, monitored, but not out yet: nothing will ever be found.
+    library.set(550, { hasFile: false, monitored: true, releaseStatus: "announced" });
+
+    const outcome = await submit(ada);
+
+    assert.equal(outcome.kind, "duplicate");
+    assert.match(
+      outcome.kind === "duplicate" ? (outcome.note ?? "") : "",
+      /not been released/i,
+      "the reason nothing is happening has to be said out loud",
+    );
   });
 
   test("an unmonitored film is put back under watch and searched for", async (t) => {

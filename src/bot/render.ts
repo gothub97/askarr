@@ -228,12 +228,15 @@ export function renderOutcome(
         `You are on it too now, so you will get the ping. ${escapeHtml(
           statusLabel(outcome.status),
         )}.`,
+        // What the instance says, when the status alone would mislead.
+        ...(outcome.note ? [escapeHtml(outcome.note)] : []),
       ].join("\n");
 
     case "duplicate":
       return [
         `${tag}You already asked for ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)}.`,
         escapeHtml(statusSentence(outcome.status, outcome.mediaItem.title)),
+        ...(outcome.note ? [escapeHtml(outcome.note)] : []),
       ].join("\n");
 
     // A blocked member gets no signal that anything happened.

@@ -235,14 +235,21 @@ function describeOutcome(
         outcome: "already_requested",
         title,
         status: outcome.status,
-        message: `Someone already asked for ${title}. You're on the list for it.`,
+        message: [
+          `Someone already asked for ${title}. You're on the list for it.`,
+          outcome.note,
+        ]
+          .filter(Boolean)
+          .join(" "),
       };
     case "duplicate":
       return {
         outcome: "duplicate",
         title,
         status: outcome.status,
-        message: `You already asked for ${title}. Check My requests.`,
+        message: [`You already asked for ${title}.`, outcome.note ?? "Check My requests."]
+          .filter(Boolean)
+          .join(" "),
       };
     case "blocked":
       return {

@@ -35,6 +35,7 @@ export interface RadarrMovie {
   images?: ArrImage[];
   hasFile?: boolean;
   monitored?: boolean;
+  status?: string;
   sizeOnDisk?: number;
 }
 
@@ -54,6 +55,7 @@ export interface SonarrSeries {
   images?: ArrImage[];
   seasons?: SonarrSeason[];
   monitored?: boolean;
+  status?: string;
   statistics?: { episodeFileCount?: number; episodeCount?: number };
 }
 
@@ -77,6 +79,12 @@ export interface LookupResult {
   hasFile: boolean;
   /** The instance is actually hunting for it. False means nothing will happen. */
   monitored: boolean;
+  /**
+   * Raw release status from the instance: "announced", "inCinemas",
+   * "released" for a movie; "upcoming", "continuing", "ended" for a series.
+   * An announced title cannot be found however hard anything looks.
+   */
+  releaseStatus: string | null;
   /** The id on the instance side, when already managed. */
   arrId: number | null;
   /** Highest season number, for the "Current season" choice. */

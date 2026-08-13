@@ -41,7 +41,14 @@ export async function lookupMovies(
   return (results ?? []).map(toLookupResult);
 }
 
-/** Looks a single title up by tmdbId, to re-check state at confirmation time. */
+/**
+ * Looks a single title up by tmdbId, to re-check state at confirmation time.
+ *
+ * /movie/lookup answers from the metadata provider and only grafts a library
+ * id on top: it does not carry hasFile at all. Reading availability from it
+ * therefore reports every film as fileless, so once the id says the library
+ * holds the movie, the library record is fetched for the truth.
+ */
 export async function lookupMovieByTmdbId(
   connection: ArrConnection,
   tmdbId: number,
@@ -51,7 +58,20 @@ export async function lookupMovieByTmdbId(
     query: { term: `tmdb:${tmdbId}` },
   });
   const match = (results ?? []).find((movie) => movie.tmdbId === tmdbId);
-  return match ? toLookupResult(match) : null;
+  if (!match) return null;
+
+  const arrId = match.id ?? 0;
+  if (arrId <= 0) return toLookupResult(match);
+
+  try {
+    const held = await arrRequest<RadarrMovie>(connection, {
+      path: `/api/v3/movie/${arrId}`,
+    });
+    return toLookupResult({ ...match, ...held });
+  } catch {
+    // Better a slightly stale answer than no answer at all.
+    return toLookupResult(match);
+  }
 }
 
 /** Returns the movie if this instance already manages it, else null. */
@@ -123,6 +143,7 @@ function toLookupResult(movie: RadarrMovie): LookupResult {
     alreadyManaged: arrId > 0,
     hasFile: movie.hasFile === true,
     monitored: movie.monitored === true,
+    releaseStatus: movie.status ?? null,
     arrId: arrId > 0 ? arrId : null,
     latestSeason: null,
   };

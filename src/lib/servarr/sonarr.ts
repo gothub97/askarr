@@ -51,7 +51,21 @@ export async function lookupSeriesByTvdbId(
     query: { term: `tvdb:${tvdbId}` },
   });
   const match = (results ?? []).find((series) => series.tvdbId === tvdbId);
-  return match ? toLookupResult(match) : null;
+  if (!match) return null;
+
+  const arrId = match.id ?? 0;
+  if (arrId <= 0) return toLookupResult(match);
+
+  // Same as Radarr: /series/lookup carries no episode statistics, so a series
+  // with every episode on disk would read as empty.
+  try {
+    const held = await arrRequest<SonarrSeries>(connection, {
+      path: `/api/v3/series/${arrId}`,
+    });
+    return toLookupResult({ ...match, ...held });
+  } catch {
+    return toLookupResult(match);
+  }
 }
 
 /** Returns the series if this instance already manages it, else null. */
@@ -133,6 +147,7 @@ function toLookupResult(series: SonarrSeries): LookupResult {
     // "we have some of this" from "we have nothing".
     hasFile: (series.statistics?.episodeFileCount ?? 0) > 0,
     monitored: series.monitored === true,
+    releaseStatus: series.status ?? null,
     arrId: arrId > 0 ? arrId : null,
     latestSeason,
   };
