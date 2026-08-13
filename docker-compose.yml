@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-askarr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-askarr}
+      POSTGRES_DB: ${POSTGRES_DB:-askarr}
+    volumes:
+      - askarr-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-askarr} -d ${POSTGRES_DB:-askarr}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        # Next inlines NEXT_PUBLIC_* at build time.
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
+      TZ: ${TZ:-Europe/Paris}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    # The web process owns migrations; the bot never runs them, so the two
+    # cannot race to apply the same migration on start-up.
+    command: sh -c "npm run db:migrate && npm run start"
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_started
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
+      TZ: ${TZ:-Europe/Paris}
+    command: npm run start:bot
+
+volumes:
+  askarr-postgres:

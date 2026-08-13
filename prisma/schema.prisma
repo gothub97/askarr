@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----- better-auth -----
+// The core auth models. The `role` field on User is exposed through
+// additionalFields in the better-auth config (see src/lib/auth.ts).
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          String   @default("admin") // "admin" | "viewer"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  telegramUsers TelegramUser[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ----- Askarr -----
+enum ArrKind {
+  RADARR
+  SONARR
+}
+
+enum AudioVersion {
+  VO // original audio only
+  MULTI // release carrying a French audio track
+}
+
+enum TelegramRole {
+  BLOCKED
+  GUEST
+  TRUSTED
+  ADMIN
+}
+
+enum MediaKind {
+  MOVIE
+  SERIES
+}
+
+enum MediaStatus {
+  PENDING // waiting for approval
+  REJECTED
+  QUEUED // approved, pushed to the instance
+  GRABBED // release grabbed
+  AVAILABLE // imported, watchable
+  FAILED
+  ALREADY_HAVE // already in the library when requested
+}
+
+model ArrInstance {
+  id               String       @id @default(cuid())
+  label            String // "Radarr MULTI", "Sonarr VO"
+  kind             ArrKind
+  version          AudioVersion
+  baseUrl          String // may include a path prefix, e.g. https://10.0.0.5/admin/radarr
+  apiKey           String
+  qualityProfileId Int
+  rootFolderPath   String
+  tagIds           Int[]        @default([])
+  allowSelfSigned  Boolean      @default(false)
+  webhookSecret    String       @default(cuid())
+  enabled          Boolean      @default(true)
+  isDefault        Boolean      @default(false) // one default per (kind, version)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  mediaItems MediaItem[]
+
+  @@unique([kind, version, label])
+}
+
+model TelegramChat {
+  id        String   @id @default(cuid())
+  chatId    BigInt   @unique
+  threadId  Int? // forum group topic
+  title     String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model TelegramUser {
+  id            String       @id @default(cuid())
+  telegramId    BigInt       @unique
+  username      String?
+  displayName   String
+  role          TelegramRole @default(GUEST)
+  quotaPerMonth Int          @default(5) // 0 = unlimited
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+
+  subscriptions Subscription[]
+  drafts        RequestDraft[]
+}
+
+// A MediaItem is one title pushed (or to be pushed) to one instance.
+// Unique on (externalId, instanceId): two people requesting the same
+// movie in MULTI share the same MediaItem.
+model MediaItem {
+  id           String      @id @default(cuid())
+  kind         MediaKind
+  externalId   Int // tmdbId for movies, tvdbId for series
+  title        String
+  year         Int?
+  overview     String?
+  posterUrl    String?
+  instanceId   String
+  instance     ArrInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  arrId        Int? // id of the object on the Radarr/Sonarr side once added
+  monitorMode  String? // Sonarr: "all" | "firstSeason" | "lastSeason"
+  status       MediaStatus @default(PENDING)
+  statusReason String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  subscriptions Subscription[]
+  events        ArrEvent[]
+
+  @@unique([externalId, instanceId])
+  @@index([status])
+}
+
+// One person's intent. N per MediaItem.
+model Subscription {
+  id             String       @id @default(cuid())
+  mediaItemId    String
+  mediaItem      MediaItem    @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+  telegramUserId String
+  telegramUser   TelegramUser @relation(fields: [telegramUserId], references: [id], onDelete: Cascade)
+  chatId         BigInt // where to reply
+  threadId       Int?
+  messageId      Int? // message to reply to
+  approvedById   String?
+  approvedAt     DateTime?
+  notifiedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@unique([mediaItemId, telegramUserId])
+  @@index([createdAt])
+}
+
+model ArrEvent {
+  id          String     @id @default(cuid())
+  mediaItemId String?
+  mediaItem   MediaItem? @relation(fields: [mediaItemId], references: [id], onDelete: SetNull)
+  instanceId  String
+  eventType   String
+  payload     Json
+  receivedAt  DateTime   @default(now())
+}
+
+// Transient state of an in-flight search in the bot.
+// Keeps callback_data under 64 bytes and survives a restart.
+model RequestDraft {
+  id             String       @id @default(cuid())
+  telegramUserId String
+  telegramUser   TelegramUser @relation(fields: [telegramUserId], references: [id], onDelete: Cascade)
+  chatId         BigInt
+  threadId       Int?
+  messageId      Int?
+  kind           MediaKind
+  results        Json // cached lookup results
+  selectedIndex  Int?
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
