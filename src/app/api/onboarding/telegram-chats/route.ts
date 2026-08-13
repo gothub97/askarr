@@ -38,7 +38,7 @@ export async function GET() {
     id: row.id,
     // BigInt has no JSON form; serialise it before it crosses to the client.
     chatId: row.chatId.toString(),
-    threadId: row.threadId,
+    threadId: row.requestThreadId,
     title: row.title,
     enabled: row.enabled,
   }));

@@ -260,14 +260,14 @@ async function upsertAllowedChat(
 function toPublicChat(chat: {
   id: string;
   chatId: bigint;
-  threadId: number | null;
+  requestThreadId: number | null;
   title: string | null;
   enabled: boolean;
 }): PublicTelegramChat {
   return {
     id: chat.id,
     chatId: chat.chatId.toString(),
-    threadId: chat.threadId,
+    threadId: chat.requestThreadId,
     title: chat.title,
     enabled: chat.enabled,
   };

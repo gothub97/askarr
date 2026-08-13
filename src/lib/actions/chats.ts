@@ -20,15 +20,24 @@ const toggleChatSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** null pins that purpose to the group's main thread. */
+const threadIdSchema = z
+  .number()
+  .int("A topic id is a whole number.")
+  .positive("A topic id is a positive number.")
+  .nullable();
+
 const topicSchema = z.object({
   id: z.string().min(1, "Pick a group first."),
-  // null pins the bot to the group's main thread.
-  threadId: z
-    .number()
-    .int("A topic id is a whole number.")
-    .positive("A topic id is a positive number.")
-    .nullable(),
+  purpose: z.enum(["request", "admin", "general"]),
+  threadId: threadIdSchema,
 });
+
+const PURPOSE_COLUMN = {
+  request: "requestThreadId",
+  admin: "adminThreadId",
+  general: "generalThreadId",
+} as const;
 
 function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Check the form and try again.";
@@ -63,7 +72,7 @@ export async function setChatTopicAction(
   try {
     await prisma.telegramChat.update({
       where: { id: parsed.data.id },
-      data: { threadId: parsed.data.threadId },
+      data: { [PURPOSE_COLUMN[parsed.data.purpose]]: parsed.data.threadId },
     });
     revalidatePath("/chats");
     return { ok: true };

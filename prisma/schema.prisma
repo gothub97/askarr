@@ -117,11 +117,21 @@ model ArrInstance {
 }
 
 model TelegramChat {
-  id        String   @id @default(cuid())
-  chatId    BigInt   @unique
-  threadId  Int? // forum group topic
-  title     String?
-  enabled   Boolean  @default(true)
+  id      String  @id @default(cuid())
+  chatId  BigInt  @unique
+  title   String?
+  enabled Boolean @default(true)
+
+  // Forum topics, one per purpose. All optional: a plain group has none, and
+  // a forum that only wants one thread can set just the first.
+  /// Where people ask. Also where an inline request is filed, since an inline
+  /// message carries no topic of its own.
+  requestThreadId Int?
+  /// Where approval prompts go, so the group does not watch itself be judged.
+  adminThreadId   Int?
+  /// Where "it landed" notices go.
+  generalThreadId Int?
+
   createdAt DateTime @default(now())
 }
 

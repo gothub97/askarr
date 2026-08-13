@@ -171,6 +171,54 @@ export async function searchMedia(
   }
 }
 
+/**
+ * Which of these titles Askarr already tracks, keyed by external id.
+ *
+ * Lets a result list say "already in the library" or "already requested"
+ * while someone is still choosing, instead of after they have walked the
+ * whole flow and confirmed. One query for a whole page of results.
+ */
+export async function findTrackedStatuses(
+  kind: MediaKind,
+  externalIds: number[],
+): Promise<Map<number, MediaStatus>> {
+  if (externalIds.length === 0) return new Map();
+
+  const items = await prisma.mediaItem.findMany({
+    where: {
+      kind,
+      externalId: { in: externalIds },
+      instance: { kind: arrKindFor(kind), enabled: true },
+    },
+    select: { externalId: true, status: true },
+  });
+
+  const tracked = new Map<number, MediaStatus>();
+  for (const item of items) {
+    // The same title can sit on two instances; the furthest-along wins, since
+    // "already available somewhere" is the more useful thing to be told.
+    const seen = tracked.get(item.externalId);
+    if (!seen || rank(item.status) > rank(seen)) {
+      tracked.set(item.externalId, item.status);
+    }
+  }
+  return tracked;
+}
+
+const STATUS_RANK: Record<MediaStatus, number> = {
+  [MediaStatus.REJECTED]: 0,
+  [MediaStatus.FAILED]: 1,
+  [MediaStatus.PENDING]: 2,
+  [MediaStatus.QUEUED]: 3,
+  [MediaStatus.GRABBED]: 4,
+  [MediaStatus.AVAILABLE]: 5,
+  [MediaStatus.ALREADY_HAVE]: 5,
+};
+
+function rank(status: MediaStatus): number {
+  return STATUS_RANK[status];
+}
+
 // ----------------------------------------------------------- telegram users
 
 /** Resolves the requester, creating them as GUEST on their first message. */

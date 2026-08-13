@@ -30,12 +30,30 @@ import {
   setChatTopicAction,
 } from "@/lib/actions/chats";
 
+/** The three jobs a forum topic can hold, in the order they read on screen. */
+const PURPOSES = ["request", "admin", "general"] as const;
+type Purpose = (typeof PURPOSES)[number];
+
+const PURPOSE_LABEL: Record<Purpose, string> = {
+  request: "Requests",
+  admin: "Approvals",
+  general: "Arrivals",
+};
+
+const PURPOSE_FIELD = {
+  request: "requestThreadId",
+  admin: "adminThreadId",
+  general: "generalThreadId",
+} as const;
+
 export interface ChatRow {
   id: string;
   /** BigInt serialized on the server. Rendered as data, never as prose. */
   chatId: string;
   title: string | null;
-  threadId: number | null;
+  requestThreadId: number | null;
+  adminThreadId: number | null;
+  generalThreadId: number | null;
   enabled: boolean;
   createdAt: string;
 }
@@ -43,11 +61,17 @@ export interface ChatRow {
 export function ChatsTable({ chats }: { chats: ChatRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Keyed "<chatId>:<purpose>" so three inputs per row edit independently.
   const [topics, setTopics] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<ChatRow | null>(null);
 
-  function topicFor(chat: ChatRow): string {
-    return topics[chat.id] ?? (chat.threadId === null ? "" : String(chat.threadId));
+  function savedTopic(chat: ChatRow, purpose: Purpose): string {
+    const value = chat[PURPOSE_FIELD[purpose]];
+    return value === null ? "" : String(value);
+  }
+
+  function topicFor(chat: ChatRow, purpose: Purpose): string {
+    return topics[`${chat.id}:${purpose}`] ?? savedTopic(chat, purpose);
   }
 
   function toggle(chat: ChatRow, enabled: boolean): void {
@@ -64,21 +88,22 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
     });
   }
 
-  function saveTopic(chat: ChatRow): void {
-    const raw = topicFor(chat).trim();
+  function saveTopic(chat: ChatRow, purpose: Purpose): void {
+    const raw = topicFor(chat, purpose).trim();
     startTransition(async () => {
       const result = await setChatTopicAction({
         id: chat.id,
+        purpose,
         threadId: raw === "" ? null : Number(raw),
       });
       if (!result.ok) {
         toast.error(result.message ?? "Could not save that topic.");
         return;
       }
-      toast.success("Saved", { description: chat.title ?? chat.chatId });
+      toast.success("Saved", { description: PURPOSE_LABEL[purpose] });
       setTopics((current) => {
         const next = { ...current };
-        delete next[chat.id];
+        delete next[`${chat.id}:${purpose}`];
         return next;
       });
       router.refresh();
@@ -107,59 +132,66 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-48">Group</TableHead>
-              <TableHead className="min-w-36">Forum topic</TableHead>
+              <TableHead className="min-w-64">Forum topics</TableHead>
               <TableHead className="min-w-28">Seen</TableHead>
               <TableHead className="min-w-28">Allowed</TableHead>
               <TableHead className="w-px text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {chats.map((chat) => {
-              const dirty =
-                topicFor(chat) !==
-                (chat.threadId === null ? "" : String(chat.threadId));
-
-              return (
-                <TableRow key={chat.id}>
-                  <TableCell className="align-top whitespace-normal">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm text-foreground">
-                        {chat.title ?? "Untitled group"}
-                      </span>
-                      <Data className="text-muted-foreground">{chat.chatId}</Data>
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="align-top">
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
-                        className="w-24 font-data"
-                        placeholder="main"
-                        aria-label={`Forum topic for ${chat.title ?? chat.chatId}`}
-                        value={topicFor(chat)}
-                        onChange={(event) =>
-                          setTopics((current) => ({
-                            ...current,
-                            [chat.id]: event.target.value,
-                          }))
-                        }
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!dirty || pending}
-                        onClick={() => saveTopic(chat)}
-                      >
-                        Save
-                      </Button>
-                    </div>
-                    <span className="block pt-1 text-xs text-muted-foreground">
-                      Empty posts in the main thread.
+            {chats.map((chat) => (
+              <TableRow key={chat.id}>
+                <TableCell className="align-top whitespace-normal">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground">
+                      {chat.title ?? "Untitled group"}
                     </span>
-                  </TableCell>
+                    <Data className="text-muted-foreground">{chat.chatId}</Data>
+                  </div>
+                </TableCell>
+
+                <TableCell className="align-top">
+                  <div className="flex flex-col gap-2">
+                    {PURPOSES.map((purpose) => {
+                      const dirty =
+                        topicFor(chat, purpose) !== savedTopic(chat, purpose);
+                      return (
+                        <div key={purpose} className="flex items-center gap-1.5">
+                          <span className="w-16 shrink-0 text-xs text-muted-foreground">
+                            {PURPOSE_LABEL[purpose]}
+                          </span>
+                          <Input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            className="w-24 font-data"
+                            placeholder="main"
+                            aria-label={`${PURPOSE_LABEL[purpose]} topic for ${chat.title ?? chat.chatId}`}
+                            value={topicFor(chat, purpose)}
+                            onChange={(event) =>
+                              setTopics((current) => ({
+                                ...current,
+                                [`${chat.id}:${purpose}`]: event.target.value,
+                              }))
+                            }
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!dirty || pending}
+                            onClick={() => saveTopic(chat, purpose)}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <span className="block pt-2 text-xs text-muted-foreground">
+                    Empty posts in the main thread. Long-press a topic in
+                    Telegram and copy its link — the last number is its id.
+                  </span>
+                </TableCell>
 
                   <TableCell className="align-top">
                     <Data className="text-muted-foreground">{chat.createdAt}</Data>
@@ -183,9 +215,8 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                       Delete
                     </Button>
                   </TableCell>
-                </TableRow>
-              );
-            })}
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

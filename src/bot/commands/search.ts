@@ -2,9 +2,13 @@ import { MediaKind } from "@prisma/client";
 import { Composer } from "grammy";
 import { escapeHtml } from "../../lib/telegram/notify";
 import { canRequest } from "../../lib/rbac";
-import { createDraft, searchMedia } from "../../lib/requests";
+import {
+  createDraft,
+  findTrackedStatuses,
+  searchMedia,
+} from "../../lib/requests";
 import { resultsKeyboard } from "../keyboards/request";
-import { noResults, resultsList } from "../render";
+import { noResults, resultsList, trackedNote } from "../render";
 import { type AskarrContext, replyHtml } from "../handlers/context";
 
 /** Long enough for any real title, short enough to keep the lookup sane. */
@@ -103,7 +107,19 @@ async function runSearch(ctx: AskarrContext, kind: MediaKind, rawTerm: string) {
     results: outcome.results,
   });
 
-  await replyHtml(ctx, resultsList(kind, term, outcome.results), {
+  // Same note as inline mode: say what the group already has before anyone
+  // picks, rather than after they have confirmed.
+  const tracked = await findTrackedStatuses(
+    kind,
+    outcome.results.map((result) => result.externalId),
+  );
+  const notes = outcome.results.map((result) =>
+    result.alreadyManaged
+      ? "in the library"
+      : trackedNote(tracked.get(result.externalId)),
+  );
+
+  await replyHtml(ctx, resultsList(kind, term, outcome.results, notes), {
     reply_markup: resultsKeyboard(draft.id, outcome.results),
   });
 }

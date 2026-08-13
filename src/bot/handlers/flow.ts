@@ -1,7 +1,9 @@
 import { MediaKind } from "@prisma/client";
 import { GrammyError, type InlineKeyboard } from "grammy";
 import { z } from "zod";
+import { prisma } from "../../lib/prisma";
 import type { LookupResult } from "../../lib/servarr/types";
+import { topicFor } from "../../lib/telegram/topics";
 import {
   MAX_RESULTS,
   draftResults,
@@ -202,7 +204,14 @@ async function submit(
     messageId: draft.messageId,
   });
 
-  const text = renderOutcome(outcome, titleWithYear(selection.title, selection.year));
+  const text = renderOutcome(
+    outcome,
+    titleWithYear(selection.title, selection.year),
+    {
+      telegramId: draft.telegramUser.telegramId,
+      displayName: draft.telegramUser.displayName,
+    },
+  );
   // `blocked` renders to null: no edit, no ping, nothing at all.
   if (text === null) return;
 
@@ -217,13 +226,24 @@ async function submit(
   }
 }
 
-/** Drops the approve/reject pair in the same chat and topic as the request. */
+/**
+ * Drops the approve/reject pair in the admin topic when the group has one.
+ *
+ * Otherwise it lands in the topic the request came from, which is the only
+ * option in a plain group — but in a forum it means the requester watches the
+ * group decide about them, buttons and all.
+ */
 async function pingAdmins(
   ctx: AskarrContext,
   draft: Draft,
   mediaItemId: string,
   item: { title: string; year: number | null; reason: "role" | "quota" | "full_series" },
 ) {
+  const chat = await prisma.telegramChat.findUnique({
+    where: { chatId: draft.chatId },
+  });
+  const thread = (chat && topicFor(chat, "admin")) ?? draft.threadId;
+
   await ctx.api.sendMessage(
     draft.chatId.toString(),
     approvalPrompt({
@@ -236,7 +256,7 @@ async function pingAdmins(
     {
       parse_mode: "HTML",
       link_preview_options: { is_disabled: true },
-      ...(draft.threadId !== null ? { message_thread_id: draft.threadId } : {}),
+      ...(thread !== null ? { message_thread_id: thread } : {}),
       reply_markup: approvalKeyboard(mediaItemId),
     },
   );

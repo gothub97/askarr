@@ -16,7 +16,9 @@ export default async function ChatsPage() {
     // BigInt cannot cross to a client component; send the digits.
     chatId: chat.chatId.toString(),
     title: chat.title,
-    threadId: chat.threadId,
+    requestThreadId: chat.requestThreadId,
+    adminThreadId: chat.adminThreadId,
+    generalThreadId: chat.generalThreadId,
     enabled: chat.enabled,
     createdAt: formatTimestamp(chat.createdAt),
   }));

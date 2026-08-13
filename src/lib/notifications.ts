@@ -1,8 +1,14 @@
-import { MediaKind, MediaStatus, type MediaItem } from "@prisma/client";
+import {
+  MediaKind,
+  MediaStatus,
+  type MediaItem,
+  type TelegramChat,
+} from "@prisma/client";
 import { prisma } from "./prisma";
 import { getAppSettings } from "./settings";
 import { statusSentence } from "./status";
 import { escapeHtml, sendReplyOrMention } from "./telegram/notify";
+import { crossesTopic, topicFor } from "./telegram/topics";
 import { seasonNumbersFromRaw } from "./webhooks/schemas";
 
 /**
@@ -118,6 +124,18 @@ async function fanOut(mediaItemId: string, text: string): Promise<number> {
     include: { telegramUser: true },
   });
 
+  // One lookup for the whole fan-out: subscribers of a title share a chat.
+  const chats = new Map<bigint, TelegramChat | null>();
+  const chatFor = async (chatId: bigint) => {
+    if (!chats.has(chatId)) {
+      chats.set(
+        chatId,
+        await prisma.telegramChat.findUnique({ where: { chatId } }),
+      );
+    }
+    return chats.get(chatId) ?? null;
+  };
+
   let sent = 0;
   for (const subscription of subscriptions) {
     const claim = await prisma.subscription.updateMany({
@@ -126,12 +144,24 @@ async function fanOut(mediaItemId: string, text: string): Promise<number> {
     });
     if (claim.count === 0) continue; // someone else got there first
 
-    // sendReplyOrMention falls back to a tg://user link when the message being
-    // replied to was deleted. Never an @handle: not every member has one.
+    /*
+     * Arrivals are announced in the general topic when the group has one, so
+     * #request stays a request queue rather than a notification feed.
+     *
+     * Telegram refuses a reply that points into a different topic, so once the
+     * announcement moves the reply target has to go: the mention becomes the
+     * only thing that pings the person who asked. sendReplyOrMention already
+     * falls back to a tg://user link — never an @handle, since not every
+     * member has one.
+     */
+    const chat = await chatFor(subscription.chatId);
+    const target = (chat && topicFor(chat, "general")) ?? subscription.threadId;
+    const sameTopic = !crossesTopic(subscription.threadId, target);
+
     const result = await sendReplyOrMention({
       chatId: subscription.chatId,
-      threadId: subscription.threadId,
-      replyToMessageId: subscription.messageId,
+      threadId: target,
+      replyToMessageId: sameTopic ? subscription.messageId : null,
       text,
       telegramId: subscription.telegramUser.telegramId,
       displayName: subscription.telegramUser.displayName,

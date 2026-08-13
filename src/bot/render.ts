@@ -64,11 +64,14 @@ export function resultsList(
   kind: MediaKind,
   term: string,
   results: LookupResult[],
+  /** Per-result note from trackedNote(), same order as results. */
+  notes: string[] = [],
 ): string {
-  const lines = results.map(
-    (result, index) =>
-      `${index + 1}. ${titleWithYearHtml(result.title, result.year)}`,
-  );
+  const lines = results.map((result, index) => {
+    const note = notes[index];
+    const suffix = note ? ` — <i>${escapeHtml(note)}</i>` : "";
+    return `${index + 1}. ${titleWithYearHtml(result.title, result.year)}${suffix}`;
+  });
   return [
     `Found these for <b>${escapeHtml(term)}</b>:`,
     "",
@@ -113,6 +116,30 @@ export function posterPreview(posterUrl: string | null) {
     : { is_disabled: true };
 }
 
+/**
+ * The short note that says a result is already known, or "" when it is new.
+ *
+ * Shown while someone is still choosing. Without it the only way to learn the
+ * group already has a title is to pick it, answer every question, confirm,
+ * and be told at the end.
+ */
+export function trackedNote(status: MediaStatus | undefined): string {
+  if (!status) return "";
+  switch (status) {
+    case "ALREADY_HAVE":
+    case "AVAILABLE":
+      return "in the library";
+    case "GRABBED":
+    case "QUEUED":
+      return "on the way";
+    case "PENDING":
+      return "waiting for an admin";
+    // Rejected and failed are not "already handled": asking again is the point.
+    default:
+      return "";
+  }
+}
+
 export function instanceQuestion(): string {
   return "Where should this go?";
 }
@@ -143,11 +170,28 @@ export function confirmQuestion(
 
 // ----------------------------------------------------------------- outcomes
 
-/** `null` means say nothing at all — the only correct answer for a block. */
+export interface Requester {
+  telegramId: bigint;
+  displayName: string;
+}
+
+/**
+ * `null` means say nothing at all — the only correct answer for a block.
+ *
+ * The three "nothing new happened" answers open with a mention. They are the
+ * ones a requester is most likely to miss: the card is edited in place rather
+ * than posted, so without a ping there is nothing to tell them their tap
+ * landed on a title the group already has.
+ */
 export function renderOutcome(
   outcome: SubmitOutcome,
   fallbackTitle: string,
+  requester?: Requester,
 ): string | null {
+  const tag = requester
+    ? `${mention(requester.telegramId, requester.displayName)} `
+    : "";
+
   switch (outcome.kind) {
     case "queued":
       return [
@@ -163,13 +207,13 @@ export function renderOutcome(
 
     case "already_have":
       return [
-        `${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already in the library.`,
+        `${tag}${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already in the library.`,
         "Go watch it.",
       ].join("\n");
 
     case "already_requested":
       return [
-        `Someone got there first — ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already on the list.`,
+        `${tag}Someone got there first — ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)} is already on the list.`,
         `You are on it too now, so you will get the ping. ${escapeHtml(
           statusLabel(outcome.status),
         )}.`,
@@ -177,7 +221,7 @@ export function renderOutcome(
 
     case "duplicate":
       return [
-        `You already asked for ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)}.`,
+        `${tag}You already asked for ${titleWithYearHtml(outcome.mediaItem.title, outcome.mediaItem.year)}.`,
         escapeHtml(statusSentence(outcome.status, outcome.mediaItem.title)),
       ].join("\n");
 

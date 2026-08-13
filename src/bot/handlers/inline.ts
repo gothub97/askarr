@@ -4,14 +4,23 @@ import type { InlineQueryResultArticle } from "grammy/types";
 import { prisma } from "../../lib/prisma";
 import {
   createDraft,
+  findTrackedStatuses,
   getSearchInstance,
   searchMedia,
   setDraftSelection,
 } from "../../lib/requests";
 import { lookupByExternalId } from "../../lib/servarr";
+import { topicFor } from "../../lib/telegram/topics";
 import type { LookupResult } from "../../lib/servarr/types";
 import { decodeCallback, encodeCallback } from "../keyboards/callback";
-import { kindNoun, mediaCard, posterPreview, titleWithYear, truncate } from "../render";
+import {
+  kindNoun,
+  mediaCard,
+  posterPreview,
+  titleWithYear,
+  trackedNote,
+  truncate,
+} from "../render";
 import type { AskarrContext } from "./context";
 import { editCard, handleDraftAction } from "./flow";
 
@@ -83,9 +92,30 @@ inline.on("inline_query", async (ctx) => {
     searchKind(MediaKind.SERIES, term),
   ]);
 
-  const results = interleave(movies, series)
-    .slice(0, MAX_INLINE_RESULTS)
-    .map(({ kind, result }) => toArticle(kind, result));
+  const shown = interleave(movies, series).slice(0, MAX_INLINE_RESULTS);
+
+  // Two queries for the page, so a result can say the group already has it
+  // before anyone commits to choosing it.
+  const [trackedMovies, trackedSeries] = await Promise.all([
+    findTrackedStatuses(
+      MediaKind.MOVIE,
+      shown.filter((r) => r.kind === MediaKind.MOVIE).map((r) => r.result.externalId),
+    ),
+    findTrackedStatuses(
+      MediaKind.SERIES,
+      shown.filter((r) => r.kind === MediaKind.SERIES).map((r) => r.result.externalId),
+    ),
+  ]);
+
+  const results = shown.map(({ kind, result }) => {
+    const tracked = kind === MediaKind.MOVIE ? trackedMovies : trackedSeries;
+    // alreadyManaged comes straight from the instance, so it is true even for
+    // titles nobody ever requested through Askarr.
+    const note = result.alreadyManaged
+      ? "in the library"
+      : trackedNote(tracked.get(result.externalId));
+    return toArticle(kind, result, note);
+  });
 
   await ctx.answerInlineQuery(results, {
     cache_time: CACHE_SECONDS,
@@ -115,10 +145,16 @@ function interleave<T>(a: T[], b: T[]): T[] {
 function toArticle(
   kind: MediaKind,
   result: LookupResult,
+  note: string,
 ): InlineQueryResultArticle {
-  const description = result.overview
-    ? `${kindNoun(kind)} · ${truncate(result.overview, DESCRIPTION_LIMIT)}`
-    : kindNoun(kind);
+  // The note earns its place ahead of the overview: it changes whether the
+  // result is worth tapping at all.
+  const lead = note ? `${kindNoun(kind)} · ${note}` : kindNoun(kind);
+  const room = DESCRIPTION_LIMIT - note.length;
+  const description =
+    result.overview && room > 20
+      ? `${lead} · ${truncate(result.overview, room)}`
+      : lead;
 
   return {
     type: "article",
@@ -235,7 +271,7 @@ async function startFromInline(ctx: AskarrContext, id: string) {
   const draft = await createDraft({
     telegramUserId: user.id,
     chatId: home.chatId,
-    threadId: home.threadId,
+    threadId: topicFor(home, "request"),
     // No reply target: the inline message is not addressable as one.
     messageId: null,
     kind,
