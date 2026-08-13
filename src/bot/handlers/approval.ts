@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { isTelegramAdmin } from "../../lib/rbac";
-import { approveRequest, rejectRequest } from "../../lib/requests";
+import {
+  approveRequest,
+  rejectRequest,
+  telegramApprover,
+} from "../../lib/requests";
 import { escapeHtml } from "../../lib/telegram/notify";
 import type { CallbackPayload } from "../keyboards/callback";
 import { approvedNotice, rejectedNotice, titleWithYearHtml } from "../render";
@@ -38,7 +42,9 @@ export async function handleApproval(
   }
 
   if (payload.action === "ap") {
-    const outcome = await approveRequest(item.id, admin.id);
+    // Tagged, because approvedById also receives web User ids from the back
+    // office and the column has no relation to catch a mix-up.
+    const outcome = await approveRequest(item.id, telegramApprover(admin.id));
     if (!outcome.ok) {
       await editCard(
         ctx,

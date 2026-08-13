@@ -443,6 +443,64 @@ async function createItemWithSubscription(args: {
 
 // ---------------------------------------------------------------- approval
 
+/**
+ * Who approved a request.
+ *
+ * Approvals arrive from two places with two disjoint identity spaces: a
+ * Telegram admin tapping a button only has a TelegramUser.id, while a web
+ * admin only has a User.id. `Subscription.approvedById` is a bare String with
+ * no relation, so nothing in the schema stops those two being mixed into one
+ * column and silently pointing at the wrong table.
+ *
+ * The value is therefore tagged at the point of writing. Always build it with
+ * one of these helpers rather than passing a raw id.
+ */
+export type Approver =
+  | { source: "telegram"; id: string }
+  | { source: "web"; id: string };
+
+export function telegramApprover(telegramUserId: string): string {
+  return `tg:${telegramUserId}`;
+}
+
+export function webApprover(userId: string): string {
+  return `web:${userId}`;
+}
+
+/** Reads a tagged approver back. Untagged legacy values are treated as web. */
+export function parseApprover(value: string | null): Approver | null {
+  if (!value) return null;
+  if (value.startsWith("tg:")) {
+    return { source: "telegram", id: value.slice(3) };
+  }
+  if (value.startsWith("web:")) {
+    return { source: "web", id: value.slice(4) };
+  }
+  return { source: "web", id: value };
+}
+
+/** Resolves a tagged approver to a display name for the back office. */
+export async function describeApprover(
+  value: string | null,
+): Promise<string | null> {
+  const approver = parseApprover(value);
+  if (!approver) return null;
+
+  if (approver.source === "telegram") {
+    const user = await prisma.telegramUser.findUnique({
+      where: { id: approver.id },
+      select: { displayName: true },
+    });
+    return user?.displayName ?? "A Telegram admin";
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: approver.id },
+    select: { name: true },
+  });
+  return user?.name ?? "An admin";
+}
+
 export type PushOutcome =
   | { ok: true; mediaItem: MediaItem }
   | { ok: false; message: string };

@@ -1,5 +1,6 @@
 import { MediaStatus } from "@prisma/client";
 import Link from "next/link";
+import { ActionButton } from "@/components/admin/action-button";
 import { Data, formatTimestamp } from "@/components/admin/data";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader, SectionTitle } from "@/components/admin/page-header";
@@ -76,9 +77,9 @@ export default async function DashboardPage() {
             title="No instance is connected yet."
             hint="Askarr needs at least one Radarr or Sonarr instance before anyone can request anything."
             action={
-              <Button render={<Link href="/instances" />} size="sm">
+              <ActionButton render={<Link href="/instances" />} size="sm">
                 Add your first instance
-              </Button>
+              </ActionButton>
             }
           />
         ) : (

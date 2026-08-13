@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "../prisma";
-import { approveRequest, rejectRequest, retryRequest } from "../requests";
+import {
+  approveRequest,
+  rejectRequest,
+  retryRequest,
+  webApprover,
+} from "../requests";
 import { assertSession } from "./guard";
 
 /**
@@ -46,7 +51,12 @@ export async function approveRequestAction(
     return { ok: false, message: firstIssue(parsed.error, "Pick a request first.") };
   }
 
-  const outcome = await approveRequest(parsed.data.mediaItemId, session.user.id);
+  // Tagged, because the bot writes TelegramUser ids into the same column and
+  // approvedById has no relation to catch the two being confused.
+  const outcome = await approveRequest(
+    parsed.data.mediaItemId,
+    webApprover(session.user.id),
+  );
   revalidateRequestViews();
   return outcome.ok ? { ok: true } : { ok: false, message: outcome.message };
 }
