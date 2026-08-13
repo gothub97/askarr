@@ -1,51 +1,243 @@
+<div align="center">
+
+<img src="docs/screenshots/mark.svg" alt="" width="72" height="72">
+
 # Askarr
 
-An *arr for the people who watch, not the person who runs the server.
+**An \*arr for the people who watch, not the person who runs the server.**
 
-Askarr lets a private circle request movies and TV shows from a Telegram group and pushes those requests straight into Radarr and Sonarr. It does not replace them, and it never talks to indexers or download clients. It owns who is allowed to request, what was requested, which instance it goes to, and who to notify when it lands.
+Your circle asks for films and shows in Telegram. Askarr checks who they are,
+puts it into Radarr or Sonarr, and tells them when it lands.
 
-No Overseerr, no Jellyseerr, no Ombi, no Plex. Metadata comes from the Radarr and Sonarr `lookup` endpoints.
+[![CI](https://github.com/gothub97/askarr/actions/workflows/ci.yml/badge.svg)](https://github.com/gothub97/askarr/actions/workflows/ci.yml)
+[![Release](https://github.com/gothub97/askarr/actions/workflows/release.yml/badge.svg)](https://github.com/gothub97/askarr/actions/workflows/release.yml)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-askarr-ff8c2b)](https://github.com/gothub97/askarr/pkgs/container/askarr)
+
+</div>
+
+---
+
+No Overseerr, no Jellyseerr, no Ombi, no Plex. Nothing to invite anyone to and
+no second account for them to forget. Metadata comes from your own Radarr and
+Sonarr `lookup` endpoints, so the only things Askarr talks to are Telegram and
+the instances it serves.
+
+## Screenshots
+
+|  |  |
+|---|---|
+| ![Requests](docs/screenshots/requests.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+| **Requests** — what the group asked for, and how far it got. | **Dashboard** — what is waiting on you right now. |
+| ![Instances](docs/screenshots/instances.png) | ![Groups](docs/screenshots/groups.png) |
+| **Instances** — Radarr and Sonarr, with one-press webhook setup. | **Groups** — which chats may ask, and which topic does what. |
 
 ## Three surfaces
 
-- **The Telegram bot** — the request surface, usable only from explicitly allowed groups.
-- **The Telegram Mini App** — browsing and request tracking, opened from the bot.
-- **The web back office** — administration, behind local authentication.
+- **The Telegram bot** — where requests happen. Usable only from groups you have explicitly allowed.
+- **The Telegram Mini App** — browsing and tracking, opened from the bot.
+- **The web back office** — administration, behind its own login.
 
-The Mini App and the back office are the same Next.js application with two separate authentication systems: Telegram `initData` validation on one side, better-auth on the other.
+The Mini App and the back office are the same Next.js application with two
+separate authentication systems: Telegram `initData` validation on one side,
+better-auth on the other.
 
-## Stack
+---
 
-Next.js (App Router, strict TypeScript) · shadcn/ui + Tailwind · better-auth · PostgreSQL + Prisma · grammY (long polling) · Zod · Docker Compose.
+## Install
 
-Everything runs on a LAN with no outbound access beyond Telegram and your Radarr/Sonarr instances.
-
-## Running it
+You need Docker, and an address where Askarr is reachable from your Radarr and
+Sonarr instances.
 
 ```bash
-cp .env.example .env
+mkdir askarr && cd askarr
+curl -O https://raw.githubusercontent.com/gothub97/askarr/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/gothub97/askarr/main/.env.example
 ```
 
-Fill in `.env`:
+Edit `.env`. Two lines actually matter to start:
 
-| Variable | What it is |
-|---|---|
-| `DATABASE_URL` | Postgres connection string |
-| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | Where the app is reachable |
-| `NEXT_PUBLIC_APP_URL` | Same, inlined into the client at build time |
-| `TELEGRAM_BOT_TOKEN` | From BotFather |
-| `TELEGRAM_MINIAPP_URL` | `<app url>/miniapp` |
+```ini
+BETTER_AUTH_SECRET="<paste the output of: openssl rand -base64 32>"
+APP_URL="https://askarr.example.com"
+```
 
 Then:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-Open the app and the first-run wizard takes it from there: administrator account, first instance, Telegram group. Steps two and three are skippable — Askarr starts fine with nothing configured and tells you what to do next.
+Open `APP_URL` and the first-run wizard takes over: administrator account,
+first instance, Telegram group. Steps two and three are skippable — Askarr
+boots with nothing configured and tells you what is missing.
 
-### Development
+The image is published to
+[GHCR](https://github.com/gothub97/askarr/pkgs/container/askarr) for
+`linux/amd64` and `linux/arm64`. `:latest` follows releases, `:edge` follows
+`main`, and `ASKARR_TAG=v0.1.0` in `.env` pins a version.
+
+> **`APP_URL` must be reachable *by your instances*, not just by your browser.**
+> Radarr calls back to it over a webhook, and that webhook is the only way
+> Askarr ever learns that something was grabbed or imported. An install where
+> this is wrong looks identical to a working one until nothing is ever marked
+> available.
+
+---
+
+## Setting up the bot
+
+### 1. Create it and get the token
+
+1. Open [@BotFather](https://t.me/botfather) and send `/newbot`.
+2. Give it a display name, then a username ending in `bot`.
+3. BotFather replies with a line like `123456789:AAH...`. **That is the token.**
+
+Put it in the back office under **Bot → New token from BotFather**, or in
+`.env` as `TELEGRAM_BOT_TOKEN` before the first start. The back office wins if
+both are set: it checks the token with Telegram before saving it, and the bot
+picks it up within a few seconds without a restart.
+
+The token is stored encrypted and is never shown again — only its last four
+characters, so you can tell two tokens apart without being able to use either.
+
+### 2. Leave privacy mode on
+
+`/setprivacy` → **Enable**. This is the default, and the whole design depends on
+it: the bot sees commands and replies to its own messages, and nothing else.
+Your group's conversation stays yours.
+
+### 3. Add it to your group
+
+Add the bot as a member. It shows up in the back office under **Groups**, not
+yet allowed, and you press **Allow**.
+
+A message from a group that has not been allowed produces no response at all —
+not an error, not a refusal. Askarr never confirms to a stranger that it exists.
+
+---
+
+## Using forum topics
+
+Optional, and worth it. Turn **Topics** on in your group settings, and Askarr
+will keep the three kinds of message apart:
+
+| Topic | What lands there |
+|---|---|
+| **Request** | where people ask for a film or a show |
+| **Approval** | where admins approve or turn a request down |
+| **General** | where a new film or show is announced once it lands |
+
+In the back office, open **Groups** and press **Create the missing topics**.
+Askarr creates them in Telegram and stores their ids for you. Pressing it twice
+is safe — it only fills the purposes that are still unset.
+
+To point a purpose at a topic you already have, open that topic in Telegram,
+copy its link, and take the last number. That is the id the field wants.
+
+<details>
+<summary>Why there is no dropdown to pick from</summary>
+
+The Bot API can *create* a forum topic but has no method to *list* them —
+`createForumTopic` exists, `getForumTopics` does not. There is nothing to fill
+a select box from, so creating them is the one path that ends with the right
+ids and no copying of links by hand.
+
+Telegram also refuses a reply that points into a different topic, which is why
+a message crossing topics mentions the person instead of replying to them.
+</details>
+
+---
+
+## The Mini App
+
+Telegram will only open a **public HTTPS URL with a valid certificate**, and it
+has to be registered against the bot — otherwise the link opens in an ordinary
+in-app browser, the Telegram bridge is never injected, and Askarr shows
+"This screen only works inside Telegram."
+
+1. Set `TELEGRAM_MINIAPP_URL` to `<your APP_URL>/miniapp`.
+2. BotFather → `/mybots` → your bot → **Bot Settings → Configure Mini App** →
+   **Enable**, then paste the same URL.
+3. Open a private chat with the bot and use its menu button, or send `/app` in
+   the group.
+
+`/app` posts a plain URL button rather than a `web_app` one, because Telegram
+only allows `web_app` buttons in private chats and Askarr lives in the group.
+Step 2 is what makes that link open as a Mini App.
+
+---
+
+## Connecting Radarr and Sonarr
+
+Add an instance in the back office, press **Test connection**, then pick a
+quality profile and root folder from what the instance reports.
+
+Then press **Set the webhook up**. Askarr registers it on the instance over the
+API — no pasting a URL into Settings → Connect, and no forgetting which events
+to tick. The events it needs are read off the instance's own schema, because
+Radarr and Sonarr name them differently and the set grows between versions.
+
+Two things worth knowing:
+
+- **Path prefixes work.** An instance at `https://host/admin/radarr` is joined
+  correctly rather than having its prefix stripped.
+- **Self-signed certificates** are handled per instance, through a dedicated
+  dispatcher. Askarr never disables TLS validation process-wide.
+
+---
+
+## Who can request what
+
+| Role | |
+|---|---|
+| `BLOCKED` | No reaction at all |
+| `GUEST` | Every request waits for approval |
+| `TRUSTED` | Auto-approved while inside the rolling 30-day quota |
+| `ADMIN` | Auto-approved, no quota |
+
+Everyone starts as `GUEST` with five requests a month. A full series always
+goes through review, even for a trusted user, because it can trigger hundreds
+of grabs; a single season does not.
+
+Quota counts requests over a rolling 30-day window — not bytes, and not
+calendar months.
+
+### Commands
+
+| | |
+|---|---|
+| `/movie <title>` | Search for a movie |
+| `/series <title>` | Search for a show |
+| `/requests` | Your ten most recent requests |
+| `/app` | Open the Mini App |
+| `/admin` | Approval queue, admins only |
+| `/help` | Command reminder |
+
+There is also inline mode: type `@yourbot dune` in the group and pick from the
+results without a slash command at all.
+
+---
+
+## How a request travels
+
+Two people asking for the same film on the same instance produce **one**
+`MediaItem` and **two** `Subscription` rows. Both get told; the film is added
+once.
+
+Askarr asks the instance before it claims anything about your library. A title
+Radarr already has is recorded as such and nothing is sent. A title Radarr
+knows but is not monitoring gets monitoring turned back on and a search
+started, rather than a comfortable "already there" that would leave you waiting
+for a file that was never coming.
+
+Notifications arrive as a reply to the message that asked. If that message is
+gone, Askarr falls back to a plain message carrying an inline mention — built
+as a `tg://user` link, because not every member has a `@username`. A completed
+season produces one notification, never one per episode.
+
+---
+
+## Development
 
 ```bash
 npm install
@@ -64,53 +256,20 @@ npm run dev:bot  # bot, in a second terminal
 | `npm run typecheck` | strict TypeScript |
 | `npm test` | unit tests |
 
-## Setting up the bot
+The tests that touch a database are skipped unless `ASKARR_TEST_DB=1` **and**
+the database name contains `test`. Both conditions, because a dev database
+holds real API keys and a real bot token.
 
-1. Create a bot with [@BotFather](https://t.me/botfather) and copy the token into `TELEGRAM_BOT_TOKEN`.
-2. **Leave privacy mode on.** The whole design relies on the bot only seeing commands and replies to its own messages.
-3. Add the bot to your group. It appears live in onboarding step three with an **Allow** button.
+Working on the Mini App means a tunnel, since Telegram needs public HTTPS.
+`next.config.ts` already allows the common tunnel hosts through Next's
+cross-origin dev-asset check; without that the page loads and every script
+behind it 403s.
 
-A message from a group that has not been allowed produces no response at all — not an error, not a refusal. Askarr never confirms to a stranger that it exists.
-
-### Commands
-
-| | |
-|---|---|
-| `/movie <title>` | Search for a movie |
-| `/series <title>` | Search for a TV show |
-| `/requests` | Your ten most recent requests |
-| `/app` | Open the Mini App |
-| `/help` | Command reminder |
-| `/admin` | Approval queue, admins only |
-
-## Connecting Radarr and Sonarr
-
-Add an instance in the back office, hit **Test connection**, and pick a quality profile and root folder from what the instance reports. Then copy the webhook URL shown on the instance card into **Settings → Connect → Webhook** on the Radarr/Sonarr side, ticking On Grab, On Import, and On Movie Added / On Series Add.
-
-Two things worth knowing:
-
-- **Path prefixes work.** An instance at `https://host/admin/radarr` is joined correctly rather than having its prefix stripped.
-- **Self-signed certificates** are handled per instance, through a dedicated dispatcher. Askarr never disables TLS validation process-wide.
-
-## Who can request what
-
-| Role | |
-|---|---|
-| `BLOCKED` | No reaction at all |
-| `GUEST` | Every request waits for approval |
-| `TRUSTED` | Auto-approved while inside the rolling 30-day quota |
-| `ADMIN` | Auto-approved, no quota |
-
-A full series always goes through review, even for a trusted user, because it can trigger hundreds of grabs. A single season does not.
-
-Quota counts requests over a rolling 30-day window, not bytes, and not calendar months.
-
-## How a request travels
-
-Two people asking for the same film on the same instance produce **one** `MediaItem` and **two** `Subscription` rows. Both get notified; the film is added once. A title already in the library is recorded as such and nothing is sent to Radarr at all.
-
-Notifications arrive as a reply to the message that asked. If that message has been deleted, Askarr falls back to a plain message carrying an inline mention — built as a `tg://user` link, because not every member has a `@username`. A completed season produces one notification, never one per episode.
+**Design:** [`DESIGN.md`](DESIGN.md) records the visual system — Askarr wears
+the \*arr interface language on purpose, so it sits beside Radarr without
+looking like a different product. [`PRODUCT.md`](PRODUCT.md) records what the
+thing is and who it is for.
 
 ## Licence
 
-Personal project. Do what you like with it.
+MIT.
