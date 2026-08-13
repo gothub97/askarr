@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 export const THEME_STORAGE_KEY = "theme";
 
 /**
@@ -19,11 +21,12 @@ document.documentElement.style.colorScheme=d?"dark":"light";
 }catch(e){}})()`.replace(/\n/g, "");
 
 export function ThemeScript() {
+  // next/script with beforeInteractive, not a bare <script>: Next injects it
+  // into the initial HTML outside React's reconciliation, so it actually runs
+  // before paint and React never sees a script element in its own tree.
   return (
-    <script
-      // The class it sets is meant to differ from the server's markup.
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: SOURCE }}
-    />
+    <Script id="askarr-theme" strategy="beforeInteractive">
+      {SOURCE}
+    </Script>
   );
 }

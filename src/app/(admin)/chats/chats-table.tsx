@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { ActionButton } from "@/components/admin/action-button";
 import { Data } from "@/components/admin/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  createForumTopicsAction,
   deleteChatAction,
   setChatEnabledAction,
   setChatTopicAction,
@@ -35,9 +37,16 @@ const PURPOSES = ["request", "admin", "general"] as const;
 type Purpose = (typeof PURPOSES)[number];
 
 const PURPOSE_LABEL: Record<Purpose, string> = {
-  request: "Requests",
-  admin: "Approvals",
-  general: "Arrivals",
+  request: "Request",
+  admin: "Approval",
+  general: "General",
+};
+
+/** Each row says what lands there, so the name alone need not carry it. */
+const PURPOSE_HINT: Record<Purpose, string> = {
+  request: "where people ask for a film or a show",
+  admin: "where admins approve or turn a request down",
+  general: "where a new film or show is announced once it lands",
 };
 
 const PURPOSE_FIELD = {
@@ -110,6 +119,20 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
     });
   }
 
+  function createTopics(chat: ChatRow): void {
+    startTransition(async () => {
+      const result = await createForumTopicsAction({ id: chat.id });
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not create the topics.");
+        return;
+      }
+      toast.success("Topics created", {
+        description: "Request, Approval and General are now in the group.",
+      });
+      router.refresh();
+    });
+  }
+
   function confirmDelete(): void {
     const target = deleting;
     if (!target) return;
@@ -132,7 +155,7 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-48">Group</TableHead>
-              <TableHead className="min-w-64">Forum topics</TableHead>
+              <TableHead className="min-w-80">Forum topics</TableHead>
               <TableHead className="min-w-28">Seen</TableHead>
               <TableHead className="min-w-28">Allowed</TableHead>
               <TableHead className="w-px text-right">Actions</TableHead>
@@ -150,16 +173,19 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                   </div>
                 </TableCell>
 
-                <TableCell className="align-top">
-                  <div className="flex flex-col gap-2">
+                <TableCell className="align-top whitespace-normal">
+                  <div className="flex flex-col gap-3">
                     {PURPOSES.map((purpose) => {
                       const dirty =
                         topicFor(chat, purpose) !== savedTopic(chat, purpose);
                       return (
-                        <div key={purpose} className="flex items-center gap-1.5">
-                          <span className="w-16 shrink-0 text-xs text-muted-foreground">
-                            {PURPOSE_LABEL[purpose]}
-                          </span>
+                        // Hint on its own line: side by side it fights the
+                        // input for width and ends up sitting under it.
+                        <div key={purpose} className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-20 shrink-0 text-xs text-foreground">
+                              {PURPOSE_LABEL[purpose]}
+                            </span>
                           <Input
                             type="number"
                             min={1}
@@ -175,21 +201,44 @@ export function ChatsTable({ chats }: { chats: ChatRow[] }) {
                               }))
                             }
                           />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!dirty || pending}
-                            onClick={() => saveTopic(chat, purpose)}
-                          >
-                            Save
-                          </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!dirty || pending}
+                              onClick={() => saveTopic(chat, purpose)}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {PURPOSE_HINT[purpose]}
+                          </span>
                         </div>
                       );
                     })}
                   </div>
+                  {PURPOSES.some((p) => chat[PURPOSE_FIELD[p]] === null) && (
+                    <div className="flex flex-col gap-1 pt-3">
+                      <ActionButton
+                        size="sm"
+                        className="self-start"
+                        disabled={pending}
+                        onClick={() => createTopics(chat)}
+                      >
+                        Create the missing topics
+                      </ActionButton>
+                      <span className="text-xs text-muted-foreground">
+                        Askarr makes them in the group and fills the ids in.
+                        Telegram offers no way to list topics that already
+                        exist, so those have to be pasted below.
+                      </span>
+                    </div>
+                  )}
+
                   <span className="block pt-2 text-xs text-muted-foreground">
-                    Empty posts in the main thread. Long-press a topic in
-                    Telegram and copy its link — the last number is its id.
+                    Empty posts in the group's main thread. To find a topic
+                    id, open the topic in Telegram, copy its link, and take the
+                    last number.
                   </span>
                 </TableCell>
 

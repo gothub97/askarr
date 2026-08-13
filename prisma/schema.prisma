@@ -129,7 +129,7 @@ model TelegramChat {
   requestThreadId Int?
   /// Where approval prompts go, so the group does not watch itself be judged.
   adminThreadId   Int?
-  /// Where "it landed" notices go.
+  /// Where a new film or show is announced once it lands.
   generalThreadId Int?
 
   createdAt DateTime @default(now())
