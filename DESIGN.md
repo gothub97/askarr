@@ -546,11 +546,11 @@ text colour — never a filled background.
 - **Don't** fill anything with the brand amber, and don't put a link or a button in it. It is chrome.
 - **Don't** introduce the *arr orange as a warning colour; warning is the gold `#f9be03`, specifically so it cannot be read as the brand.
 - **Don't** add a sixth type size, a display face, uppercase, or letter-spacing. A page title is 16px bold and that is the ceiling.
-- **Don't** ask for a weight Lato does not ship. The loaded cuts are 300, 400 and 700; `font-medium` and `font-semibold` have no cut behind them.
+- **Don't** ask for a weight Lato does not ship. Only 400 and 700 are loaded; `font-medium` and `font-semibold` have no cut behind them and resolve silently to 400.
 - **Don't** add a radius that is not 2px or 4px, and don't reintroduce pill-shaped chips or buttons.
 - **Don't** put a shadow, gradient or hover-lift on an in-flow surface. Depth is a background value step plus a hairline.
 - **Don't** centre the back office in a max-width column or cap its width.
 - **Don't** build a row of hero-metric cards. Counts ride in the page header as chips.
 - **Don't** render a list of records as cards. Records are table rows.
-- **Don't** hardcode a colour in a component. `#66afe9` is already in four files without a token and should not gain a fifth.
+- **Don't** hardcode a colour in a component. Every colour in the build goes through a token, the field focus blue included (`--focus-field`); there are no exceptions left to copy.
 - **Don't** set `whitespace-nowrap` on table cells; the content is titles and sentences, and wrapping is the default on purpose.

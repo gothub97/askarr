@@ -246,7 +246,7 @@
       "Don't fill anything with the brand amber, and don't put a link or a button in it. It is chrome.",
       "Don't introduce the *arr orange as a warning colour; warning is the gold #f9be03, specifically so it cannot be read as the brand.",
       "Don't add a sixth type size, a display face, uppercase, or letter-spacing. A page title is 16px bold and that is the ceiling.",
-      "Don't ask for a weight Lato does not ship. The loaded cuts are 300, 400 and 700; font-medium and font-semibold have no cut behind them.",
+      "Don't ask for a weight Lato does not ship. Only 400 and 700 are loaded; font-medium and font-semibold have no cut behind them and resolve silently to 400.",
       "Don't add a radius that is not 2px or 4px, and don't reintroduce pill-shaped chips or buttons.",
       "Don't put a shadow, gradient or hover-lift on an in-flow surface. Depth is a background value step plus a hairline.",
       "Don't centre the back office in a max-width column or cap its width.",
