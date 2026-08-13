@@ -21,9 +21,11 @@ import {
   type WebhookSetupOutcome,
 } from "../servarr";
 import { assertConfigurator } from "./guard";
+import { appUrl } from "../env";
 
-function appUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+/** The address to hand an instance, with a dev-friendly default. */
+function publicUrl(): string {
+  return appUrl() ?? "http://localhost:3000";
 }
 
 export async function testInstanceConnectionAction(
@@ -59,7 +61,7 @@ export async function createInstanceAction(
     const instance = await createInstance(parsed.data);
     revalidatePath("/instances");
     revalidatePath("/dashboard");
-    return { ok: true, instance: toPublicInstance(instance, appUrl()) };
+    return { ok: true, instance: toPublicInstance(instance, publicUrl()) };
   } catch (error) {
     return { ok: false, message: describeWriteError(error) };
   }
@@ -79,7 +81,7 @@ export async function updateInstanceAction(
     const instance = await updateInstance(id, parsed.data);
     revalidatePath("/instances");
     revalidatePath("/dashboard");
-    return { ok: true, instance: toPublicInstance(instance, appUrl()) };
+    return { ok: true, instance: toPublicInstance(instance, publicUrl()) };
   } catch (error) {
     return { ok: false, message: describeWriteError(error) };
   }
@@ -160,25 +162,25 @@ export async function configureWebhookAction(
     return { ok: false, message: "That instance no longer exists. Reload the page." };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  if (!appUrl) {
+  const url = appUrl() ?? "";
+  if (!url) {
     return {
       ok: false,
-      message: "NEXT_PUBLIC_APP_URL is not set, so there is no address to give the instance.",
+      message: "APP_URL is not set, so there is no address to give the instance.",
     };
   }
-  if (/localhost|127\.0\.0\.1/.test(appUrl)) {
+  if (/localhost|127\.0\.0\.1/.test(url)) {
     return {
       ok: false,
       message:
-        "NEXT_PUBLIC_APP_URL points at localhost, which means the instance itself — it could never reach Askarr there. Use a public address or a tunnel.",
+        "APP_URL points at localhost, which means the instance itself — it could never reach Askarr there. Use a public address or a tunnel.",
     };
   }
 
   try {
     const outcome = await configureWebhook(
       instance,
-      webhookUrlFor(instance, appUrl),
+      webhookUrlFor(instance, url),
     );
     revalidatePath("/instances");
     return { ok: true, outcome };
@@ -197,7 +199,7 @@ function describeWebhookFailure(error: unknown, label: string): string {
   const raw = error instanceof ArrError ? error.hint : "";
 
   if (/unable to (post to webhook|send test message)/i.test(raw)) {
-    return `${label} could not reach Askarr at that address. It has to be reachable from the instance itself — check the tunnel or NEXT_PUBLIC_APP_URL.`;
+    return `${label} could not reach Askarr at that address. It has to be reachable from the instance itself — check the tunnel or APP_URL.`;
   }
   if (error instanceof ArrError) return error.hint;
 

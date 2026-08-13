@@ -16,10 +16,9 @@ FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Next inlines NEXT_PUBLIC_* at build time, so the public URL must be present
-# here and not only at runtime.
-ARG NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+# Nothing about this build is install-specific. Askarr reads APP_URL at run
+# time only (src/lib/env.ts explains why it is not a NEXT_PUBLIC_ variable),
+# so one published image serves every deployment.
 RUN npx prisma generate && npm run build
 
 # --------------------------------------------------------------- runner

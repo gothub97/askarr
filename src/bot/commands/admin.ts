@@ -4,6 +4,7 @@ import { countPendingRequests, listPendingRequests } from "../../lib/requests";
 import { backOfficeKeyboard } from "../keyboards/request";
 import { pendingLine } from "../render";
 import { type AskarrContext, replyHtml } from "../handlers/context";
+import { appUrl } from "../../lib/env";
 
 /** Enough to act on in a chat message; the rest belongs in the back office. */
 const QUEUE_PREVIEW = 10;
@@ -33,7 +34,7 @@ adminCommand.command("admin", async (ctx) => {
             : []),
         ];
 
-  const backOffice = process.env.NEXT_PUBLIC_APP_URL;
+  const backOffice = appUrl();
   await replyHtml(ctx, lines.join("\n"), {
     ...(backOffice ? { reply_markup: backOfficeKeyboard(backOffice) } : {}),
   });

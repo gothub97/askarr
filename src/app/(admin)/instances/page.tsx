@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { prisma } from "@/lib/prisma";
 import { findRootFolderCollisions, toPublicInstance } from "@/lib/instances";
 import { InstancesManager } from "./instances-manager";
+import { appUrl } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,9 @@ export default async function InstancesPage() {
   ]);
 
   // toPublicInstance masks the API key: the raw one never reaches the browser.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const url = appUrl() ?? "http://localhost:3000";
   const publicInstances = instances.map((instance) =>
-    toPublicInstance(instance, appUrl),
+    toPublicInstance(instance, url),
   );
 
   return (
