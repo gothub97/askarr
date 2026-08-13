@@ -21,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteInstanceAction } from "@/lib/actions/instances";
+import {
+  configureWebhookAction,
+  deleteInstanceAction,
+} from "@/lib/actions/instances";
 import type { PublicInstance } from "@/lib/instances";
 import { InstanceForm } from "./instance-form";
 
@@ -211,15 +214,36 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Radarr and Sonarr only report progress if the webhook is wired by hand, and
- * the event names differ between the two. Spelling out exactly which boxes to
- * tick is the difference between a working install and a silent one.
+ * Askarr only ever learns that something was grabbed or imported through this
+ * webhook. An install where nobody wired it looks exactly like a broken one:
+ * requests sit at "queued" while the file is already on disk. So the first
+ * offer is to set it up over the API, and the manual recipe stays for anyone
+ * who would rather do it themselves.
  */
 function WebhookPanel({ instance }: { instance: PublicInstance }) {
+  const [pending, startTransition] = useTransition();
   const events =
     instance.kind === "RADARR"
       ? ["On Grab", "On Import / On Download", "On Movie Added"]
       : ["On Grab", "On Import / On Download", "On Series Add"];
+
+  function configure(): void {
+    startTransition(async () => {
+      const result = await configureWebhookAction({ id: instance.id });
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not set the webhook up.");
+        return;
+      }
+      toast.success(
+        result.outcome === "created"
+          ? "Webhook added"
+          : result.outcome === "updated"
+            ? "Webhook address corrected"
+            : "Webhook was already correct",
+        { description: instance.label },
+      );
+    });
+  }
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-3">
@@ -232,8 +256,19 @@ function WebhookPanel({ instance }: { instance: PublicInstance }) {
         />
       </div>
       <Data className="break-all text-foreground">{instance.webhookUrl}</Data>
-      <p className="text-xs text-muted-foreground">
-        In {instance.kind === "RADARR" ? "Radarr" : "Sonarr"}, open Settings &gt;
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <ActionButton size="sm" disabled={pending} onClick={configure}>
+          Set the webhook up
+        </ActionButton>
+        <span className="text-xs text-muted-foreground">
+          Askarr registers it on the instance itself.
+        </span>
+      </div>
+
+      <p className="pt-1 text-xs text-muted-foreground">
+        Or do it by hand: in{" "}
+        {instance.kind === "RADARR" ? "Radarr" : "Sonarr"}, open Settings &gt;
         Connect &gt; add a Webhook, paste the URL, tick these events, then press
         Test:
       </p>

@@ -2,6 +2,7 @@ import type { ArrInstance } from "@prisma/client";
 import type { ArrConnection } from "./client";
 import * as radarr from "./radarr";
 import * as sonarr from "./sonarr";
+import { ensureWebhook, type WebhookSetupOutcome } from "./webhook-setup";
 import type {
   LookupResult,
   QualityProfile,
@@ -14,6 +15,8 @@ export { ArrError, joinArrUrl } from "./client";
 export type { ArrConnection } from "./client";
 export * from "./types";
 export { radarr, sonarr };
+export { ensureWebhook };
+export type { WebhookSetupOutcome };
 
 /** Narrows a stored instance to just the connection details. */
 export function toConnection(
@@ -123,4 +126,12 @@ export async function resumeOnInstance(
   return instance.kind === "RADARR"
     ? radarr.resumeMovie(connection, arrId)
     : sonarr.resumeSeries(connection, arrId);
+}
+
+/** Registers Askarr's webhook on the instance. See webhook-setup.ts. */
+export async function configureWebhook(
+  instance: ArrInstance,
+  webhookUrl: string,
+): Promise<WebhookSetupOutcome> {
+  return ensureWebhook(toConnection(instance), webhookUrl, instance.id);
 }
