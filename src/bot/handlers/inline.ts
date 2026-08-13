@@ -32,6 +32,12 @@ import { editCard, handleDraftAction } from "./flow";
 
 const MAX_INLINE_RESULTS = 10;
 const MIN_QUERY_LENGTH = 2;
+/**
+ * Telegram clips an inline description to the row width rather than wrapping
+ * it whole, so an overlong one loses its middle and reads as broken text.
+ * Short enough to end on our own ellipsis instead.
+ */
+const DESCRIPTION_LIMIT = 60;
 /** Short: results depend on who is asking and on library state. */
 const CACHE_SECONDS = 10;
 
@@ -111,7 +117,7 @@ function toArticle(
   result: LookupResult,
 ): InlineQueryResultArticle {
   const description = result.overview
-    ? `${kindNoun(kind)} · ${truncate(result.overview, 90)}`
+    ? `${kindNoun(kind)} · ${truncate(result.overview, DESCRIPTION_LIMIT)}`
     : kindNoun(kind);
 
   return {
