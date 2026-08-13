@@ -4,7 +4,7 @@ import { escapeHtml } from "../../lib/telegram/notify";
 import { canRequest } from "../../lib/rbac";
 import { createDraft, searchMedia } from "../../lib/requests";
 import { resultsKeyboard } from "../keyboards/request";
-import { kindNoun, noResults, resultsList } from "../render";
+import { noResults, resultsList } from "../render";
 import { type AskarrContext, replyHtml } from "../handlers/context";
 
 /** Long enough for any real title, short enough to keep the lookup sane. */
@@ -113,9 +113,4 @@ function kindForPrompt(text: string | undefined): MediaKind | null {
   if (text === PROMPTS[MediaKind.MOVIE]) return MediaKind.MOVIE;
   if (text === PROMPTS[MediaKind.SERIES]) return MediaKind.SERIES;
   return null;
-}
-
-/** Exported for the help copy so the two never drift. */
-export function searchHint(kind: MediaKind): string {
-  return `/${kind === MediaKind.MOVIE ? "movie" : "series"} — search a ${kindNoun(kind)}`;
 }

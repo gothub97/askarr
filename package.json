@@ -10,7 +10,7 @@
     "start:bot": "tsx src/bot/index.ts",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental false",
     "test": "node --env-file-if-exists=.env --import tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {

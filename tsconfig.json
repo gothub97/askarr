@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    // ES2020 or later is required: Telegram ids are BigInt and the codebase
+    // uses BigInt literals (-1001234567890n) for chat ids.
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
