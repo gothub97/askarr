@@ -192,25 +192,12 @@
   --sidebar-border: #202020;
   --sidebar-ring: #ff8c2b;
 
-  /* Snapshot of this theme, for the Mini App to fall back to when Telegram
-     supplies no palette of its own. See the .tg-viewport block. */
-  --app-background: #f5f7fa;
-  --app-surface: #ffffff;
-  --app-card: #ffffff;
-  --app-foreground: #515253;
-  --app-muted-foreground: #6b6d70;
-  --app-primary: #2c6cb8;
-  --app-primary-fill: #3273c8;
-  --app-primary-foreground: #ffffff;
-
   /*
    * The onboarding plates: the drawn BotFather and group illustrations in
    * src/components/onboarding/illustrations.
    *
-   * Not to be confused with --tg-theme-*, which is Telegram's own palette
-   * handed to the Mini App by the client. These are ours, and they exist so a
-   * plate follows the operator's theme instead of being a dark screenshot
-   * pasted onto a light page. Telegram's shapes, Askarr's values.
+   * They exist so a plate follows the operator's theme instead of being a dark
+   * screenshot pasted onto a light page. Telegram's shapes, Askarr's values.
    */
   --plate-shell: #ffffff;
   --plate-head: #f2f5f9;
@@ -306,17 +293,6 @@
   --sidebar-border: #202020;
   --sidebar-ring: #ff8c2b;
 
-  /* Snapshot of this theme, for the Mini App to fall back to when Telegram
-     supplies no palette of its own. See the .tg-viewport block. */
-  --app-background: #202020;
-  --app-surface: #2a2a2a;
-  --app-card: #333333;
-  --app-foreground: #cccccc;
-  --app-muted-foreground: #9b9d9e;
-  --app-primary: #6fa8ee;
-  --app-primary-fill: #3273c8;
-  --app-primary-foreground: #ffffff;
-
   /* The plates in the dark register. Telegram's own night values, which is
      what makes them read as a chat window rather than as another panel. */
   --plate-shell: #17212b;
@@ -410,35 +386,3 @@
   }
 }
 
-/*
- * Telegram Mini App theming. Telegram injects its own palette as CSS variables
- * on the WebView; when present they win, so the Mini App matches the user's
- * client instead of clashing with it.
- *
- * This is deliberate asymmetry: the back office wears Radarr's clothes because
- * its reader is an operator with Radarr open. The Mini App's reader is someone
- * inside Telegram who has never seen Radarr, so it wears Telegram's.
- */
-.tg-viewport {
-  /*
-   * Each fallback is the ambient theme's own value, captured as `--app-*`
-   * above, rather than a hardcoded light one. Inside Telegram the `--tg-*`
-   * variables are always present and this never matters; outside it the
-   * "open this in Telegram" screen, reachable by pasting the URL in a browser
-   * result was that a hardcoded light default rendered a light page inside a dark app.
-   */
-  --background: var(--tg-theme-bg-color, var(--app-background));
-  --surface: var(--tg-theme-secondary-bg-color, var(--app-surface));
-  --card: var(--tg-theme-secondary-bg-color, var(--app-card));
-  --foreground: var(--tg-theme-text-color, var(--app-foreground));
-  --card-foreground: var(--tg-theme-text-color, var(--app-foreground));
-  --muted-foreground: var(--tg-theme-hint-color, var(--app-muted-foreground));
-  --brand: var(--tg-theme-button-color, var(--app-primary));
-  --primary: var(--tg-theme-button-color, var(--app-primary));
-  --primary-fill: var(--tg-theme-button-color, var(--app-primary-fill));
-  --primary-foreground: var(
-    --tg-theme-button-text-color,
-    var(--app-primary-foreground)
-  );
-  --ring: var(--tg-theme-button-color, var(--app-primary));
-}

@@ -95,14 +95,6 @@ export function approvalKeyboard(mediaItemId: string): InlineKeyboard {
     .text("Reject", encodeCallback({ action: "rj", id: mediaItemId, arg: "" }));
 }
 
-/**
- * A plain URL button, not a `web_app` one: Telegram only allows web_app
- * buttons in private chats, and Askarr lives in the group.
- */
-export function miniAppKeyboard(url: string): InlineKeyboard {
-  return new InlineKeyboard().url("Open Askarr", url);
-}
-
 export function backOfficeKeyboard(url: string): InlineKeyboard {
   return new InlineKeyboard().url("Open the back office", url);
 }

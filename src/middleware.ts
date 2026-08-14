@@ -87,9 +87,8 @@ export const config = {
     /*
      * Everything except:
      *  - /api          (routes do their own auth; the bot and webhooks need in)
-     *  - /miniapp      (authenticated by initData, not by a session)
      *  - Next internals and static assets
      */
-    "/((?!api|miniapp|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

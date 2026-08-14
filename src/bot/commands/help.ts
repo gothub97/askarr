@@ -11,7 +11,6 @@ helpCommand.command("help", async (ctx) => {
     "/movie <i>title</i> — find a film to add",
     "/series <i>title</i> — find a show to add",
     "/requests — what you asked for, and where it stands",
-    "/app — open Askarr",
     "/help — this list",
   ];
 

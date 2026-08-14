@@ -59,7 +59,7 @@ export interface SonarrSeries {
   statistics?: { episodeFileCount?: number; episodeCount?: number };
 }
 
-/** Instance-agnostic search result, the only shape the bot and Mini App see. */
+/** Instance-agnostic search result, the only shape the bot ever sees. */
 export interface LookupResult {
   /** tmdbId for movies, tvdbId for series. */
   externalId: number;

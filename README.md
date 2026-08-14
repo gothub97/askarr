@@ -31,15 +31,14 @@ the instances it serves.
 | ![Instances](docs/screenshots/instances.png) | ![Groups](docs/screenshots/groups.png) |
 | **Instances**: Radarr and Sonarr, with one-press webhook setup. | **Groups**: which chats may ask, and which topic does what. |
 
-## Three surfaces
+## Two surfaces
 
 - **The Telegram bot**, where requests happen. Usable only from groups you have explicitly allowed.
-- **The Telegram Mini App**, for browsing and tracking, opened from the bot.
 - **The web back office**, for administration, behind its own login.
 
-The Mini App and the back office are the same Next.js application with two
-separate authentication systems: Telegram `initData` validation on one side,
-better-auth on the other.
+Everyone who asks for something stays in Telegram, with slash commands and
+inline search. The back office is for the one person who runs the server, and
+nobody else ever needs to open it.
 
 ---
 
@@ -170,25 +169,6 @@ a message crossing topics mentions the person instead of replying to them.
 
 ---
 
-## The Mini App
-
-Telegram will only open a **public HTTPS URL with a valid certificate**, and it
-has to be registered against the bot. Otherwise the link opens in an ordinary
-in-app browser, the Telegram bridge is never injected, and Askarr shows
-"This screen only works inside Telegram."
-
-1. Set `TELEGRAM_MINIAPP_URL` to `<your APP_URL>/miniapp`.
-2. BotFather → `/mybots` → your bot → **Bot Settings → Configure Mini App** →
-   **Enable**, then paste the same URL.
-3. Open a private chat with the bot and use its menu button, or send `/app` in
-   the group.
-
-`/app` posts a plain URL button rather than a `web_app` one, because Telegram
-only allows `web_app` buttons in private chats and Askarr lives in the group.
-Step 2 is what makes that link open as a Mini App.
-
----
-
 ## Connecting Radarr and Sonarr
 
 Add an instance in the back office, press **Test connection**, then pick a
@@ -231,7 +211,6 @@ calendar months.
 | `/movie <title>` | Search for a movie |
 | `/series <title>` | Search for a show |
 | `/requests` | Your ten most recent requests |
-| `/app` | Open the Mini App |
 | `/admin` | Approval queue, admins only |
 | `/help` | Command reminder |
 
@@ -282,11 +261,6 @@ npm run dev:bot  # bot, in a second terminal
 The tests that touch a database are skipped unless `ASKARR_TEST_DB=1` **and**
 the database name contains `test`. Both conditions, because a dev database
 holds real API keys and a real bot token.
-
-Working on the Mini App means a tunnel, since Telegram needs public HTTPS.
-`next.config.ts` already allows the common tunnel hosts through Next's
-cross-origin dev-asset check; without that the page loads and every script
-behind it 403s.
 
 **Design:** [`DESIGN.md`](DESIGN.md) records the visual system. Askarr wears
 the \*arr interface language on purpose, so it sits beside Radarr without

@@ -279,7 +279,7 @@ export function BotManager({
           />
           <p className="text-sm text-muted-foreground">
             Replacing the token signs the old one out. Anything already sent
-            stays; the Mini App re-authenticates against the new token.
+            stays, and the bot reconnects on the new token within a second.
           </p>
           <div className="pt-1">
             <Button

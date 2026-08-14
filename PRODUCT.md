@@ -67,8 +67,8 @@ Constraints that are facts of the platforms, not choices:
 - Telegram **refuses a reply that points into another forum topic**, so a
   message crossing topics has to mention the person instead.
 - The Bot API can create forum topics but offers **no way to list them**.
-- The **Mini App requires a publicly reachable HTTPS URL** with a valid
-  certificate; Telegram will not load anything else.
+- **Inline mode is off by default** on a new bot and has to be switched on with
+  `/setinline`. Left off, inline search returns nothing and says nothing.
 - **Webhooks require Askarr to be reachable from the instance.** An operator on
   a LAN with a remote Radarr has to solve this, and an install where it was
   never solved looks identical to a broken one.

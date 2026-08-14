@@ -17,7 +17,6 @@ const serverSchema = z.object({
   // This one only seeds a fresh install, so Askarr can boot with no UI visit.
   // See src/lib/bot-token.ts.
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
-  TELEGRAM_MINIAPP_URL: z.string().url().optional(),
   TZ: z.string().optional(),
 });
 
