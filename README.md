@@ -105,10 +105,22 @@ image, so a one-container install has to be one image.
    refuses to create a privileged container from an OCI image.
 3. **Disks**: add a mount point at `/data`, 8 GB is plenty. Everything Askarr
    keeps lives there and nothing outside it matters.
-4. **Options → Environment**: set `APP_URL`. Askarr refuses to start without
-   it, on purpose, because the same warning above applies here and a container
-   that boots with the wrong one looks healthy for weeks.
-5. Start it, open `APP_URL`, and the same first-run wizard takes over.
+4. Start it. Askarr picks up its own address and uses `http://<that>:3000` as
+   `APP_URL`, saying so in the log. Open it, and the same first-run wizard
+   takes over.
+5. Only if that guess is wrong, because Radarr and Sonarr cannot reach the
+   container directly or Askarr sits behind a domain or a reverse proxy, set it
+   yourself under **Options → Environment**, or from the host shell:
+
+   ```
+   pct set <ctid> --env APP_URL=https://askarr.example.com
+   pct reboot <ctid>
+   ```
+
+   That key replaces the container's whole environment rather than adding to
+   it, which is harmless here because the entrypoint sets everything else it
+   needs. Get it wrong and nothing is ever marked available, because the
+   webhook never arrives.
 
 Nothing else needs setting. The session secret and the database password are
 generated on first boot and kept in `/data`. Setting `DATABASE_URL` yourself is
@@ -120,8 +132,13 @@ Two things that catch people out:
   an LXC. Pull the newer image, create a new CT from it, give it the same
   `/data`, and delete the old one. Migrations run on every start, so the new
   container picks the old database up and carries on.
-- **There is no login shell.** Application containers have no console, so
-  `pct exec <ctid> -- psql` and friends are how you get in.
+- **The Console tab is a log, not a login.** It shows what Askarr is printing,
+  which is where to look first when something is wrong: the startup messages
+  say what it read `APP_URL` as, whether it initialised a database, and whether
+  both processes came up. For an actual shell, use `pct exec <ctid> -- bash`.
+- **A container that will not start says so somewhere else.** `pct start` only
+  reports that it has no PID. `pct start <ctid> --debug` gives LXC's own trace,
+  and the Console tab has whatever Askarr managed to print before it stopped.
 
 Application containers are a technology preview in Proxmox at the time of
 writing. If you are not already on Proxmox, the compose install above is the

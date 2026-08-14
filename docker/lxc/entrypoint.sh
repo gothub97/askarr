@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#
+# Absolute, not `/usr/bin/env bash`: env has to search PATH to find bash, and
+# PATH is one of the things a `pct set --env` can wipe. The shebang would then
+# fail before this script had a chance to put PATH back.
 #
 # PID 1 for the all-in-one image (docker/Dockerfile.lxc): bring up Postgres,
 # apply migrations, then run the web app and the bot side by side.
@@ -14,6 +18,19 @@
 
 set -euo pipefail
 
+# Everything this script needs to run, set here rather than relied on from the
+# image. Proxmox stores the image's environment in the container config, and
+# its `env:` key REPLACES that list rather than adding to it: somebody setting
+# APP_URL with `pct set --env` would otherwise silently drop PATH, NODE_ENV and
+# the rest, and break the container a second way while fixing the first.
+export PATH=/usr/lib/postgresql/17/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export NODE_ENV=production
+export NEXT_TELEMETRY_DISABLED=1
+export PORT=${PORT:-3000}
+# Always every interface. This is an appliance; there is nothing else in the
+# container to serve, and binding to the hostname would depend on it resolving.
+export HOSTNAME=0.0.0.0
+
 PGDATA=${PGDATA:-/data/postgres}
 DATA_DIR=$(dirname "$PGDATA")
 SECRET_FILE="$DATA_DIR/secret"
@@ -28,28 +45,92 @@ say() { printf 'askarr: %s\n' "$*"; }
 
 # ------------------------------------------------------------------ APP_URL
 #
-# The one value nobody can guess for the operator, and the one whose absence
-# is invisible later: Radarr's webhook is the only way Askarr ever learns that
-# something was grabbed or imported, so a missing or wrong APP_URL looks
-# exactly like a working install until nothing is ever marked available.
-# Refusing to start is the honest failure.
+# The address Radarr and Sonarr call back on. Their webhook is the only way
+# Askarr ever learns that something was grabbed or imported, so a wrong one
+# looks exactly like a working install until nothing is ever marked available.
+#
+# It used to refuse to start without one. That was wrong here: a Proxmox
+# application container has no console, so the explanation went nowhere and the
+# operator saw only "unable to get PID (not running?)". Worse, with DHCP there
+# is no address to configure until the container has booted at least once, so
+# refusing to boot made the right value impossible to learn.
+#
+# So: guess, say so, and carry on. On a normal LAN the container's own address
+# is exactly what Radarr can reach, and a guess that turns out wrong is
+# correctable in the back office. A container that will not start is not.
+# Typing this into the Proxmox Environment field invites "192.168.1.251",
+# which is not a URL. Unchecked it reaches better-auth as its base URL and
+# throws on every render, so the back office answers 500 and the reason is
+# four stack frames deep in a chunk file. Fix what is unambiguous, reject what
+# is not, and do both here where the message is one line.
+normalise_url() {
+  local raw="$1"
+  raw="${raw#"${raw%%[![:space:]]*}"}"   # leading space
+  raw="${raw%"${raw##*[![:space:]]}"}"   # trailing space
+  raw="${raw%/}"                          # trailing slash
+  [ -z "$raw" ] && return 1
+  case "$raw" in
+    http://* | https://*) ;;
+    *) raw="http://$raw" ;;
+  esac
+  # A bare address with no port means the container itself, since nothing else
+  # in it serves anything. A hostname is left alone: that is what somebody
+  # behind a reverse proxy on 80 or 443 would have written on purpose.
+  node -e '
+    const u = new URL(process.argv[1]);
+    if (u.protocol !== "http:" && u.protocol !== "https:") process.exit(1);
+    if (!u.port && /^[0-9.]+$/.test(u.hostname)) u.port = process.argv[2];
+    process.stdout.write(u.origin);
+  ' "$raw" "$PORT" 2>/dev/null
+}
+
+guess_own_url() {
+  local ip=""
+  # DHCP is host-managed and may land a moment after the container starts.
+  for _ in $(seq 1 15); do
+    ip=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.' | head -1 || true)
+    [ -n "$ip" ] && break
+    sleep 1
+  done
+  [ -n "$ip" ] && printf 'http://%s:%s' "$ip" "$PORT"
+}
+
 if [ -z "${APP_URL:-}" ]; then
-  cat >&2 <<'MSG'
-askarr: refusing to start, because APP_URL is not set.
+  APP_URL=$(guess_own_url)
+  if [ -z "$APP_URL" ]; then
+    echo "askarr: no APP_URL, and no address of my own to guess one from." >&2
+    echo "askarr: set APP_URL in the container's Options tab, under Environment." >&2
+    exit 1
+  fi
+  cat <<MSG
+askarr: APP_URL was not set, so I guessed $APP_URL from my own address.
 
-APP_URL is the address Askarr is reachable at FROM YOUR RADARR AND SONARR,
-not the one you type in your browser. Radarr calls back to it over a webhook,
-and that webhook is the only way Askarr learns that something arrived.
-
-On Proxmox, set it in the container's Options tab under Environment, or from
-the host shell:
-
-    pct set <ctid> --env APP_URL=http://10.0.0.42:3000
-    pct reboot <ctid>
-
-With docker run, pass -e APP_URL=http://... instead.
+If Radarr and Sonarr can reach that, there is nothing to do. If they cannot,
+or you put Askarr behind a domain or a reverse proxy, set APP_URL in the
+container's Options tab under Environment and restart. Until it is right,
+nothing will ever be marked as available, because the webhook will not arrive.
 MSG
-  exit 1
+else
+  given=$APP_URL
+  if ! APP_URL=$(normalise_url "$given") || [ -z "$APP_URL" ]; then
+    cat >&2 <<MSG
+askarr: APP_URL is set to "$given", which is not an address I can use.
+
+It needs to be a whole URL, scheme and all, and the port Askarr answers on
+unless something in front of it is forwarding:
+
+    APP_URL=http://192.168.1.251:3000
+    APP_URL=https://askarr.example.com
+
+Set it in the container's Options tab under Environment, then restart.
+MSG
+    exit 1
+  fi
+  # An `x && y` here would be the last command of the block, and under set -e a
+  # false test would take the whole script down with it.
+  if [ "$APP_URL" != "$given" ]; then
+    echo "askarr: read APP_URL \"$given\" as $APP_URL"
+  fi
 fi
 
 mkdir -p "$DATA_DIR"
