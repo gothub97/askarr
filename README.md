@@ -77,14 +77,55 @@ remembers where you were, so closing the tab loses nothing.
 
 The image is published to
 [GHCR](https://github.com/gothub97/askarr/pkgs/container/askarr) for
-`linux/amd64` and `linux/arm64`. `:latest` follows releases, `:edge` follows
-`main`, and `ASKARR_TAG=v0.1.0` in `.env` pins a version.
+`linux/amd64` and `linux/arm64`. `:latest` follows releases and
+`ASKARR_TAG=v0.1.0` in `.env` pins a version. Images are built only when a
+version is cut, so every tag names a release you can read the changelog for.
 
 > **`APP_URL` must be reachable *by your instances*, not just by your browser.**
 > Radarr calls back to it over a webhook, and that webhook is the only way
 > Askarr ever learns that something was grabbed or imported. An install where
 > this is wrong looks identical to a working one until nothing is ever marked
 > available.
+
+---
+
+## On Proxmox
+
+Proxmox VE 9.1 and newer can run an OCI image as an LXC directly, so Askarr can
+sit in your CT list next to Radarr and Sonarr instead of inside a Docker daemon
+nested in a container.
+
+There is a second image for this, `:latest-lxc`, carrying Postgres, the web app
+and the bot together. Proxmox has no compose equivalent, and an LXC runs one
+image, so a one-container install has to be one image.
+
+1. Pick a storage, open **CT Templates**, press **Pull from OCI registry** and
+   give it `ghcr.io/gothub97/askarr:latest-lxc`.
+2. **Create CT** from that template. Leave **Unprivileged** ticked. Proxmox
+   refuses to create a privileged container from an OCI image.
+3. **Disks**: add a mount point at `/data`, 8 GB is plenty. Everything Askarr
+   keeps lives there and nothing outside it matters.
+4. **Options → Environment**: set `APP_URL`. Askarr refuses to start without
+   it, on purpose, because the same warning above applies here and a container
+   that boots with the wrong one looks healthy for weeks.
+5. Start it, open `APP_URL`, and the same first-run wizard takes over.
+
+Nothing else needs setting. The session secret and the database password are
+generated on first boot and kept in `/data`. Setting `DATABASE_URL` yourself is
+honoured, and skips the bundled Postgres entirely if you already run one.
+
+Two things that catch people out:
+
+- **Upgrading means recreating the container.** There is no `docker pull` for
+  an LXC. Pull the newer image, create a new CT from it, give it the same
+  `/data`, and delete the old one. Migrations run on every start, so the new
+  container picks the old database up and carries on.
+- **There is no login shell.** Application containers have no console, so
+  `pct exec <ctid> -- psql` and friends are how you get in.
+
+Application containers are a technology preview in Proxmox at the time of
+writing. If you are not already on Proxmox, the compose install above is the
+better-trodden path.
 
 ---
 

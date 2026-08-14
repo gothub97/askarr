@@ -1,0 +1,74 @@
+# Askarr as one container: Postgres, the web app and the bot in a single image.
+#
+# This exists for Proxmox. PVE 9.1 can pull an OCI image straight from a
+# registry and run it as an LXC, but it has no compose equivalent: one
+# container runs one image. Pointing it at the ordinary Askarr image therefore
+# gets you a web process with no database and no bot, which is not an install.
+#
+# docker/Dockerfile stays the image for everyone else. Nothing here is a
+# replacement for it, and the two are built from the same source in the same
+# release.
+#
+# Debian all the way through rather than Alpine. Prisma ships a different query
+# engine for musl than for glibc, so these two images cannot share a
+# node_modules even though they share every line of source.
+
+FROM node:22-trixie-slim AS base
+ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
+
+# ---------------------------------------------------------------- deps
+FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+RUN npm ci
+
+# --------------------------------------------------------------- build
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate && npm run build
+
+# --------------------------------------------------------------- runner
+FROM base AS runner
+ENV NODE_ENV=production
+
+# postgresql-17 is in Debian 13 main (17.10), so there is no third-party apt
+# repository to trust here. dumb-init because this process is PID 1 and bash
+# does not reap orphans.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      postgresql-17 \
+      postgresql-client-17 \
+      dumb-init \
+      openssl \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/lib/postgresql/17/bin:${PATH}"
+
+# The bot runs from TypeScript through tsx, and `prisma migrate deploy` runs at
+# start-up, so this image carries the full dependency tree rather than a
+# standalone bundle. Same reasoning as docker/Dockerfile.
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+COPY prisma ./prisma
+COPY src ./src
+COPY package.json next.config.ts tsconfig.json ./
+COPY docker/lxc/entrypoint.sh /usr/local/bin/askarr-entrypoint
+RUN chmod +x /usr/local/bin/askarr-entrypoint
+
+# Everything that has to outlive the container. On Proxmox this is the one
+# mount point you attach, and attaching the same one to a newly created
+# container is how an upgrade works: there is no `docker pull` for an LXC.
+ENV PGDATA=/data/postgres
+VOLUME /data
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/local/bin/askarr-entrypoint"]

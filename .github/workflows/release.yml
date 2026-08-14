@@ -4,17 +4,22 @@ name: Release
 #
 #   1. You merge a feature branch into main. If it carried a .changeset/*.md,
 #      this workflow opens (or updates) a PR called
-#      "chore(release): version packages" — that PR folds every changeset into
-#      CHANGELOG.md and bumps the version in package.json.
+#      "chore(release): version packages". That PR folds every changeset into
+#      CHANGELOG.md and bumps the version in package.json. Nothing is built
+#      and nothing is published.
 #   2. You merge THAT PR. This workflow runs again, sees no changesets left,
-#      runs `changeset tag`, pushes the tag, publishes the image to GHCR and
+#      runs `changeset tag`, pushes the tag, publishes both images to GHCR and
 #      cuts the GitHub release.
 #
+# Merging the release PR is the ONLY thing that builds an image. A push to main
+# that is not a release produces no artefact at all, deliberately: a published
+# image should correspond to a version somebody can name.
+#
 # Everything lives in one workflow on purpose. A tag pushed with GITHUB_TOKEN
-# does not trigger further workflow runs — GitHub blocks that to avoid loops —
-# so a separate `on: push: tags:` job would simply never fire. The image build
-# is therefore a dependent job in the same run, gated on the tag having been
-# created.
+# does not trigger further workflow runs, because GitHub blocks that to avoid
+# loops, so a separate `on: push: tags:` job would simply never fire. The image
+# builds are therefore dependent jobs in the same run, gated on the tag having
+# been created.
 
 on:
   push:
@@ -128,6 +133,46 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      # The Proxmox flavour: the same source with Postgres and both processes
+      # in one image, because PVE has no compose and an LXC runs one image.
+      # See docker/Dockerfile.lxc. amd64 only, since Proxmox VE is x86-64 only.
+      - id: meta-lxc
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+            suffix=-lxc
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.value }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.value }}
+            type=semver,pattern={{major}},value=v${{ steps.version.outputs.value }}
+          labels: |
+            org.opencontainers.image.title=Askarr (all-in-one)
+            org.opencontainers.image.description=Askarr with Postgres and the bot in one container, for Proxmox LXC.
+            org.opencontainers.image.licenses=MIT
+
+      - id: build-lxc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.lxc
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-lxc.outputs.tags }}
+          labels: ${{ steps.meta-lxc.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build-lxc.outputs.digest }}
+          push-to-registry: true
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: askarr@${{ steps.version.outputs.value }}
@@ -135,38 +180,16 @@ jobs:
           # CHANGELOG.md is the source of truth; the body points at it rather
           # than duplicating it into a second place that can drift.
           body: |
-            Docker image:
+            Docker, with the bundled compose file:
 
             ```
             ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}
             ```
 
-            See [CHANGELOG.md](https://github.com/${{ env.IMAGE_NAME }}/blob/main/CHANGELOG.md) for what changed.
+            Proxmox, as a single LXC pulled from the OCI registry:
 
-  # Every push to main that is not a release still refreshes :edge, so the
-  # bleeding edge is installable without waiting for a version bump.
-  edge:
-    needs: version
-    if: needs.version.outputs.published != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:edge
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ```
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }}-lxc
+            ```
+
+            See [CHANGELOG.md](https://github.com/${{ env.IMAGE_NAME }}/blob/main/CHANGELOG.md) for what changed.
