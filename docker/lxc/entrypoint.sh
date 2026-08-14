@@ -58,6 +58,32 @@ say() { printf 'askarr: %s\n' "$*"; }
 # So: guess, say so, and carry on. On a normal LAN the container's own address
 # is exactly what Radarr can reach, and a guess that turns out wrong is
 # correctable in the back office. A container that will not start is not.
+# Typing this into the Proxmox Environment field invites "192.168.1.251",
+# which is not a URL. Unchecked it reaches better-auth as its base URL and
+# throws on every render, so the back office answers 500 and the reason is
+# four stack frames deep in a chunk file. Fix what is unambiguous, reject what
+# is not, and do both here where the message is one line.
+normalise_url() {
+  local raw="$1"
+  raw="${raw#"${raw%%[![:space:]]*}"}"   # leading space
+  raw="${raw%"${raw##*[![:space:]]}"}"   # trailing space
+  raw="${raw%/}"                          # trailing slash
+  [ -z "$raw" ] && return 1
+  case "$raw" in
+    http://* | https://*) ;;
+    *) raw="http://$raw" ;;
+  esac
+  # A bare address with no port means the container itself, since nothing else
+  # in it serves anything. A hostname is left alone: that is what somebody
+  # behind a reverse proxy on 80 or 443 would have written on purpose.
+  node -e '
+    const u = new URL(process.argv[1]);
+    if (u.protocol !== "http:" && u.protocol !== "https:") process.exit(1);
+    if (!u.port && /^[0-9.]+$/.test(u.hostname)) u.port = process.argv[2];
+    process.stdout.write(u.origin);
+  ' "$raw" "$PORT" 2>/dev/null
+}
+
 guess_own_url() {
   local ip=""
   # DHCP is host-managed and may land a moment after the container starts.
@@ -84,6 +110,27 @@ or you put Askarr behind a domain or a reverse proxy, set APP_URL in the
 container's Options tab under Environment and restart. Until it is right,
 nothing will ever be marked as available, because the webhook will not arrive.
 MSG
+else
+  given=$APP_URL
+  if ! APP_URL=$(normalise_url "$given") || [ -z "$APP_URL" ]; then
+    cat >&2 <<MSG
+askarr: APP_URL is set to "$given", which is not an address I can use.
+
+It needs to be a whole URL, scheme and all, and the port Askarr answers on
+unless something in front of it is forwarding:
+
+    APP_URL=http://192.168.1.251:3000
+    APP_URL=https://askarr.example.com
+
+Set it in the container's Options tab under Environment, then restart.
+MSG
+    exit 1
+  fi
+  # An `x && y` here would be the last command of the block, and under set -e a
+  # false test would take the whole script down with it.
+  if [ "$APP_URL" != "$given" ]; then
+    echo "askarr: read APP_URL \"$given\" as $APP_URL"
+  fi
 fi
 
 mkdir -p "$DATA_DIR"

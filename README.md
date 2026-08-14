@@ -132,8 +132,13 @@ Two things that catch people out:
   an LXC. Pull the newer image, create a new CT from it, give it the same
   `/data`, and delete the old one. Migrations run on every start, so the new
   container picks the old database up and carries on.
-- **There is no login shell.** Application containers have no console, so
-  `pct exec <ctid> -- psql` and friends are how you get in.
+- **The Console tab is a log, not a login.** It shows what Askarr is printing,
+  which is where to look first when something is wrong: the startup messages
+  say what it read `APP_URL` as, whether it initialised a database, and whether
+  both processes came up. For an actual shell, use `pct exec <ctid> -- bash`.
+- **A container that will not start says so somewhere else.** `pct start` only
+  reports that it has no PID. `pct start <ctid> --debug` gives LXC's own trace,
+  and the Console tab has whatever Askarr managed to print before it stopped.
 
 Application containers are a technology preview in Proxmox at the time of
 writing. If you are not already on Proxmox, the compose install above is the
