@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
  * `default` is the primary action.
  */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border bg-clip-padding leading-none whitespace-nowrap transition-colors outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-65 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md border bg-clip-padding leading-none whitespace-nowrap transition-colors outline-none select-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-65 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {

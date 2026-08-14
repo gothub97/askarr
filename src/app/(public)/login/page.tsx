@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in — Askarr",
+  title: "Sign in to Askarr",
 };
 
 /**
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
  */
 
 /**
- * Only same-origin, absolute-path destinations are honoured. Anything else —
- * "//evil.example", "https://…", a protocol-relative path — is an open
+ * Only same-origin, absolute-path destinations are honoured. Anything else
+ * ("//evil.example", "https://…", a protocol-relative path) is an open
  * redirect waiting to happen and falls back to the dashboard.
  */
 function safeNext(value: string | string[] | undefined): string {
@@ -32,5 +32,10 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
 
-  return <LoginForm next={safeNext(params.next)} />;
+  // The shell's column is fluid; a sign-in form caps itself.
+  return (
+    <div className="mx-auto w-full max-w-lg">
+      <LoginForm next={safeNext(params.next)} />
+    </div>
+  );
 }

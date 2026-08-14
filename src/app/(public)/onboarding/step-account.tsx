@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import type { Administrator } from "./onboarding-wizard";
 
 /**
- * Step 1 — the administrator account.
+ * Step 1. The administrator account.
  *
  * The account is created server-side through better-auth and the session is
  * opened in the same round trip, so the rest of the wizard runs authenticated

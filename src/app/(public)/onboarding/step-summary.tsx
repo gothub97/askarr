@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2Icon, OctagonXIcon } from "lucide-react";
+import { Loader2Icon, OctagonXIcon, TriangleAlertIcon } from "lucide-react";
 import {
   completeSetupAction,
   getSetupSummaryAction,
 } from "@/lib/actions/onboarding";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,21 +16,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { Administrator } from "./onboarding-wizard";
-import type { SetupSummary } from "./types";
+import { Label as StatusLabel } from "@/components/status-label";
+import type { ResolvedBot, SetupSummary } from "./types";
 
 /**
- * Step 4 — the recap, then the point of no return.
+ * Step 7. The recap, then the point of no return.
  *
  * The recap is read back from the database rather than from wizard state: what
  * matters is what was actually written, not what the browser thinks it sent.
+ *
+ * The last block is the one worth having. Two things cannot be finished from
+ * here (the Mini App has to be switched on in BotFather by hand, and quotas
+ * start at a default nobody chose) and an operator who is not told will find
+ * out from a person asking why something does not work. Saying it here costs a
+ * paragraph.
  */
 
 export function StepSummary({
-  administrator,
+  bot,
   onBack,
 }: {
-  administrator: Administrator | null;
+  bot: ResolvedBot | null;
   onBack: () => void;
 }) {
   const [summary, setSummary] = useState<SetupSummary | null>(null);
@@ -62,16 +67,14 @@ export function StepSummary({
     if (result?.message) setError(result.message);
   }
 
-  const admin = summary?.administrator ?? administrator;
+  const admin = summary?.administrator ?? null;
   const instances = summary?.instances ?? [];
   const allowedChats = summary?.chats.filter((chat) => chat.enabled) ?? [];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">
-          Check and finish
-        </CardTitle>
+        <CardTitle className="text-xl">Askarr is running</CardTitle>
         <CardDescription>
           Finishing locks this wizard for good. Everything below stays editable
           from the back office.
@@ -90,83 +93,56 @@ export function StepSummary({
         {!summary && !error ? (
           <p className="text-base text-muted-foreground">Reading back setup…</p>
         ) : (
-          <>
-            <section className="flex flex-col gap-1.5">
-              <h2 className="text-sm text-muted-foreground">Administrator</h2>
-              {admin ? (
-                <p className="text-base text-foreground">
-                  {admin.name}{" "}
-                  <span className="font-data text-muted-foreground">
-                    {admin.email}
-                  </span>
-                </p>
-              ) : (
-                <p className="text-base text-destructive">
-                  No administrator. Go back to step 1 and create one.
-                </p>
-              )}
-            </section>
-
-            <Separator />
-
-            <section className="flex flex-col gap-2">
-              <h2 className="text-sm text-muted-foreground">Instances</h2>
-              {instances.length === 0 ? (
-                <p className="rounded-md border border-border bg-surface p-3 text-base text-muted-foreground">
-                  No instance connected. Askarr will accept no request until
-                  you add Radarr or Sonarr from Instances.
-                </p>
-              ) : (
-                instances.map((instance) => (
-                  <div
-                    key={instance.id}
-                    className="flex flex-col gap-1 rounded-md border border-border p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-base text-foreground">
-                        {instance.label}
-                      </span>
-                      <Badge variant="outline">{instance.kind}</Badge>
-                    </div>
-                    <p className="font-data text-sm break-all text-muted-foreground">
-                      {instance.baseUrl}
-                    </p>
-                    <p className="font-data text-sm break-all text-muted-foreground">
-                      {instance.rootFolderPath} · profile{" "}
-                      {instance.qualityProfileId}
-                    </p>
-                  </div>
-                ))
-              )}
-            </section>
-
-            <Separator />
-
-            <section className="flex flex-col gap-2">
-              <h2 className="text-sm text-muted-foreground">Allowed groups</h2>
-              {allowedChats.length === 0 ? (
-                <p className="rounded-md border border-border bg-surface p-3 text-base text-muted-foreground">
-                  No group allowed. The bot will stay silent everywhere until
-                  you allow one from Telegram groups.
-                </p>
-              ) : (
-                allowedChats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className="flex items-center justify-between gap-2 rounded-md border border-border p-3"
-                  >
-                    <span className="truncate text-base text-foreground">
-                      {chat.title ?? "Untitled group"}
-                    </span>
-                    <span className="font-data text-sm text-muted-foreground">
-                      {chat.chatId}
-                    </span>
-                  </div>
-                ))
-              )}
-            </section>
-          </>
+          <div className="flex flex-col rounded-md border border-border">
+            <Row
+              label="Administrator"
+              detail={admin ? admin.email : "None. Go back to step 1."}
+              status={admin ? "Created" : null}
+            />
+            <Row
+              label={bot?.displayName ?? "Bot"}
+              detail={bot ? `@${bot.username}` : "Token saved"}
+              status="Connected"
+            />
+            <Row
+              label={
+                allowedChats.length === 1
+                  ? (allowedChats[0]?.title ?? "Group")
+                  : `${allowedChats.length} groups`
+              }
+              detail={
+                allowedChats.length === 1
+                  ? (allowedChats[0]?.chatId ?? "")
+                  : allowedChats.map((chat) => chat.chatId).join(", ")
+              }
+              status="Allowed"
+            />
+            <Row
+              label={
+                instances.length === 0
+                  ? "Radarr and Sonarr"
+                  : instances.map((instance) => instance.label).join(", ")
+              }
+              detail={
+                instances.length === 0
+                  ? "None yet. Askarr will accept no request until you add one."
+                  : instances.map((instance) => instance.baseUrl).join(", ")
+              }
+              status={instances.length === 0 ? null : "Connected"}
+              last
+            />
+          </div>
         )}
+
+        <Alert variant="warning">
+          <TriangleAlertIcon />
+          <AlertTitle>Two things Askarr cannot do for you</AlertTitle>
+          <AlertDescription>
+            The Mini App has to be switched on in BotFather by hand, under Bot
+            Settings then Configure Mini App. And everyone starts on five
+            requests a month until you change it under Settings.
+          </AlertDescription>
+        </Alert>
 
         <Separator />
 
@@ -181,10 +157,44 @@ export function StepSummary({
             onClick={onFinish}
           >
             {finishing && <Loader2Icon className="animate-spin" aria-hidden />}
-            {finishing ? "Finishing setup" : "Finish setup"}
+            {finishing ? "Finishing setup" : "Open the dashboard"}
           </Button>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function Row({
+  label,
+  detail,
+  status,
+  last,
+}: {
+  label: string;
+  detail: string;
+  status: string | null;
+  last?: boolean;
+}) {
+  return (
+    <div
+      className={
+        last
+          ? "flex flex-wrap items-center justify-between gap-2 p-3"
+          : "flex flex-wrap items-center justify-between gap-2 border-b border-border p-3"
+      }
+    >
+      <div className="min-w-0">
+        <p className="truncate text-base text-foreground">{label}</p>
+        <p className="truncate font-data text-sm text-muted-foreground">
+          {detail}
+        </p>
+      </div>
+      {status ? (
+        <StatusLabel kind="success">{status}</StatusLabel>
+      ) : (
+        <StatusLabel kind="disabled">Not set</StatusLabel>
+      )}
+    </div>
   );
 }

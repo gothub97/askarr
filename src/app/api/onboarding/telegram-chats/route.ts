@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isSetupCompleted } from "@/lib/settings";
 
 /**
- * Step 3 of the wizard polls this every few seconds while the operator adds
+ * Step 4 of the wizard polls this every few seconds while the operator adds
  * the bot to their group. The bot process writes a TelegramChat row when it is
  * added somewhere; this endpoint is how the browser learns about it without a
  * websocket.

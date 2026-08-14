@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { CheckCircle2Icon, Loader2Icon, OctagonXIcon } from "lucide-react";
 import {
+  configureWebhookAction,
   createInstanceAction,
   testInstanceConnectionAction,
 } from "@/lib/actions/instances";
@@ -30,7 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import type { ArrKindValue } from "./types";
 
 /**
- * Step 2 — the first Radarr or Sonarr instance.
+ * Step 6. The first Radarr or Sonarr instance.
  *
  * The quality profile and the root folder are never typed: they are read off
  * the instance itself during the connection test. A hand-typed profile id is
@@ -61,9 +62,11 @@ function formatFreeSpace(bytes: number | null): string | null {
 export function StepInstance({
   onDone,
   onSkip,
+  onBack,
 }: {
   onDone: () => void;
   onSkip: () => void;
+  onBack: () => void;
 }) {
   const [label, setLabel] = useState("");
   const [kind, setKind] = useState<ArrKindValue>("RADARR");
@@ -78,6 +81,11 @@ export function StepInstance({
   const [error, setError] = useState<string | null>(null);
   const [testing, startTesting] = useTransition();
   const [saving, startSaving] = useTransition();
+
+  const [saved, setSaved] = useState<{ id: string; label: string } | null>(null);
+  const [configuringWebhook, setConfiguringWebhook] = useState(false);
+  const [webhookDone, setWebhookDone] = useState(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
 
   /*
    * Any change to the connection details invalidates the probe: the profiles
@@ -139,8 +147,28 @@ export function StepInstance({
       }
 
       toast.success(`${result.instance.label} saved.`);
-      onDone();
+      /*
+       * Saved is not connected. Askarr only hears that a film landed when the
+       * instance calls its webhook, and that is the step most likely to be put
+       * off and then forgotten. So the step does not end here: it offers the
+       * webhook, and the operator leaves when they choose to.
+       */
+      setSaved({ id: result.instance.id, label: result.instance.label });
     });
+  }
+
+  async function onConfigureWebhook() {
+    if (!saved) return;
+    setWebhookError(null);
+    setConfiguringWebhook(true);
+    const result = await configureWebhookAction({ id: saved.id });
+    setConfiguringWebhook(false);
+
+    if (!result.ok) {
+      setWebhookError(result.message ?? "Could not set the webhook up.");
+      return;
+    }
+    setWebhookDone(true);
   }
 
   const canTest = baseUrl.trim().length > 0 && apiKey.trim().length > 0;
@@ -157,7 +185,7 @@ export function StepInstance({
           Connect the first instance
         </CardTitle>
         <CardDescription>
-          Test the connection first — the quality profile and root folder are
+          Test the connection first. The quality profile and root folder are
           read from the instance, not typed.
         </CardDescription>
       </CardHeader>
@@ -356,21 +384,85 @@ export function StepInstance({
           </>
         )}
 
+        {saved && (
+          <>
+            <Separator />
+
+            <section className="flex flex-col gap-2">
+              <h2 className="text-lg font-bold text-foreground">
+                Let {saved.label} call back
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Askarr registers the webhook over the API, so there is no URL to
+                paste into Settings and no guessing which events to tick. It
+                reads those off the instance&apos;s own schema, because Radarr
+                and Sonarr name them differently.
+              </p>
+
+              {webhookError && (
+                <Alert variant="destructive">
+                  <OctagonXIcon />
+                  <AlertTitle>Webhook not set up</AlertTitle>
+                  <AlertDescription>{webhookError}</AlertDescription>
+                </Alert>
+              )}
+
+              {webhookDone ? (
+                <Alert variant="success">
+                  <CheckCircle2Icon />
+                  <AlertTitle>Webhook registered</AlertTitle>
+                  <AlertDescription>
+                    {saved.label} will tell Askarr when something lands.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-fit"
+                  disabled={configuringWebhook}
+                  onClick={onConfigureWebhook}
+                >
+                  {configuringWebhook && (
+                    <Loader2Icon className="animate-spin" aria-hidden />
+                  )}
+                  {configuringWebhook
+                    ? "Setting the webhook up"
+                    : "Set the webhook up"}
+                </Button>
+              )}
+            </section>
+          </>
+        )}
+
         <Separator />
 
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          <Button type="button" variant="ghost" size="lg" onClick={onSkip}>
-            Skip for now
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            disabled={!canSave || saving}
-            onClick={onSave}
-          >
-            {saving && <Loader2Icon className="animate-spin" aria-hidden />}
-            {saving ? "Saving instance" : "Save instance"}
-          </Button>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button type="button" variant="ghost" size="lg" onClick={onBack}>
+              Back
+            </Button>
+            {!saved && (
+              <Button type="button" variant="ghost" size="lg" onClick={onSkip}>
+                Skip for now
+              </Button>
+            )}
+          </div>
+          {saved ? (
+            <Button type="button" size="lg" onClick={onDone}>
+              Continue
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="lg"
+              disabled={!canSave || saving}
+              onClick={onSave}
+            >
+              {saving && <Loader2Icon className="animate-spin" aria-hidden />}
+              {saving ? "Saving instance" : "Save instance"}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

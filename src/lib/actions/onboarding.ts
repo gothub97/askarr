@@ -5,15 +5,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type {
+  PublicBotRuntime,
   PublicTelegramChat,
+  SetupProgress,
   SetupSummary,
 } from "@/app/(public)/onboarding/types";
 import { auth } from "../auth";
-import { getActiveBotToken } from "../bot-token";
+import { readBotStatus } from "../bot-control";
+import { getActiveBotToken, getBotTokenState, setBotToken } from "../bot-token";
 import { prisma } from "../prisma";
 import { getSession } from "../session";
 import { isSetupCompleted, markSetupCompleted } from "../settings";
 import { callTelegram } from "../telegram/notify";
+import { BOT_TOKEN_PATTERN, resolveBot } from "../telegram/resolve-bot";
 
 /**
  * Server actions for the first-run wizard.
@@ -21,7 +25,7 @@ import { callTelegram } from "../telegram/notify";
  * Every one of them refuses once `setup_completed` is true. That is the second
  * half of the "410 Gone" contract: the page can be made unreachable, but a
  * server action is addressable by id and can be replayed straight at the
- * server, so the door has to be shut here too — otherwise a replayed step 1
+ * server, so the door has to be shut here too, because otherwise a replayed step 1
  * would mint a second administrator.
  */
 
@@ -65,7 +69,7 @@ export type CreateAdministratorResult =
 /**
  * Creates the one administrator and opens their session in the same request.
  * The session cookie is written by better-auth's nextCookies plugin, which
- * hooks server-action responses — no second sign-in round trip.
+ * hooks server-action responses, so there is no second sign-in round trip.
  */
 export async function createAdministratorAction(
   input: unknown,
@@ -138,19 +142,92 @@ function describeSignUpError(error: unknown): string {
 
 // ---------------------------------------------------------------- step 3
 
+const saveTokenSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(20, "That is too short to be a bot token.")
+    .regex(BOT_TOKEN_PATTERN, "A bot token looks like 123456789:AA…"),
+});
+
+export type SaveTokenResult =
+  | { ok: true; username: string; displayName: string }
+  | { ok: false; gone?: true; message: string };
+
+/**
+ * Step 3: the token from BotFather.
+ *
+ * Checked with Telegram before it is saved, because saving is what bumps the
+ * version the bot process watches. An unchecked bad token would knock a running
+ * bot off Telegram and leave it idling on a credential that was never going to
+ * work, and the operator would be told nothing until the next step found no
+ * groups.
+ *
+ * No session is required, which is deliberate and narrow: this whole module is
+ * unreachable once `setup_completed` is true, so the window in which an
+ * anonymous caller could set a token is the same window in which they could
+ * create the administrator. The account is the thing worth guarding, and step 1
+ * already does.
+ */
+export async function saveTelegramTokenAction(
+  input: unknown,
+): Promise<SaveTokenResult> {
+  if (await isSetupCompleted()) return gone();
+
+  const parsed = saveTokenSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "That is not a bot token.",
+    };
+  }
+
+  const resolved = await resolveBot(parsed.data.token);
+  if (!resolved.ok) return { ok: false, message: resolved.message };
+
+  await setBotToken(parsed.data.token);
+
+  return {
+    ok: true,
+    username: resolved.username,
+    displayName: resolved.displayName,
+  };
+}
+
+/**
+ * What the bot process last said about itself.
+ *
+ * Step 3 polls this after saving, and watching it go from no_token to polling
+ * is the only honest confirmation the wizard can offer: the web process cannot
+ * connect to Telegram on the bot's behalf, and a token that Telegram accepted
+ * still has to reach a process that is actually running.
+ */
+export async function getBotRuntimeAction(): Promise<PublicBotRuntime | null> {
+  if (await isSetupCompleted()) return null;
+
+  const status = await readBotStatus();
+  if (!status.runtime) return null;
+
+  return {
+    state: status.runtime.state,
+    detail: status.runtime.detail,
+    username: status.runtime.username,
+    fresh: status.alive,
+  };
+}
+
 export type ResolveBotResult =
   | { ok: true; username: string; displayName: string }
   | { ok: false; gone?: true; message: string };
 
-/** Resolves the bot behind the active token so step 3 can name it. */
+/** Resolves the bot behind the active token so step 4 can name it. */
 export async function resolveTelegramBotAction(): Promise<ResolveBotResult> {
   if (await isSetupCompleted()) return gone();
 
   if (!(await getActiveBotToken())) {
     return {
       ok: false,
-      message:
-        "No bot token yet. Set TELEGRAM_BOT_TOKEN, or add one from the back office once setup is done.",
+      message: "No bot token yet. Go back a step and paste the one BotFather gave you.",
     };
   }
 
@@ -273,7 +350,89 @@ function toPublicChat(chat: {
   };
 }
 
-// ---------------------------------------------------------------- step 4
+// ------------------------------------------------------------ resume state
+
+/** What a finished install reports: nothing. */
+const EMPTY_PROGRESS: SetupProgress = {
+  administrator: null,
+  hasToken: false,
+  tokenHint: null,
+  bot: null,
+  allowedChats: [],
+  hasInstance: false,
+  hasTopics: false,
+};
+
+/**
+ * How far setup got, read back from the database.
+ *
+ * Steps 3 and 4 are gates, and both of them send the operator out of the
+ * browser: one to BotFather, one to a Telegram group. Some of them will close
+ * the tab. Until `setup_completed` is true the middleware redirects every route
+ * to /onboarding, so coming back has to land on the step they left, not on step
+ * one. Nothing here is remembered by the client; every answer is a fact already
+ * written down.
+ *
+ * No session is required, because during onboarding there may not be one yet.
+ * The refusal below is what makes that safe: this returns the administrator's
+ * name and email and the ids of every allowed group, and a server action is
+ * addressable by id and replayable, so without it a stranger could replay this
+ * against a finished install and read all of it. The token is only ever
+ * reported as a boolean and four characters, never as itself.
+ */
+export async function getSetupProgressAction(): Promise<SetupProgress> {
+  if (await isSetupCompleted()) return EMPTY_PROGRESS;
+
+  const session = await getSession();
+
+  const [tokenState, chats, instanceCount] = await Promise.all([
+    getBotTokenState(),
+    prisma.telegramChat.findMany({ where: { enabled: true } }),
+    prisma.arrInstance.count(),
+  ]);
+
+  const hasToken = tokenState.source !== "missing";
+
+  /*
+   * Naming the bot costs a getMe, so it is only worth doing when there is a
+   * token to name. A failure here is not an error state: the next step will
+   * report it properly, and the wizard should still open.
+   */
+  let bot: SetupProgress["bot"] = null;
+  if (hasToken) {
+    const response = await callTelegram<{
+      username?: string;
+      first_name?: string;
+    }>("getMe", {}).catch(() => null);
+    if (response?.ok && response.result.username) {
+      bot = {
+        username: response.result.username,
+        displayName: response.result.first_name ?? response.result.username,
+      };
+    }
+  }
+
+  return {
+    administrator: session
+      ? { name: session.user.name, email: session.user.email }
+      : null,
+    hasToken,
+    tokenHint: tokenState.hint,
+    bot,
+    allowedChats: chats.map(toPublicChat),
+    hasInstance: instanceCount > 0,
+    hasTopics:
+      chats.length > 0 &&
+      chats.every(
+        (chat) =>
+          chat.requestThreadId !== null &&
+          chat.adminThreadId !== null &&
+          chat.generalThreadId !== null,
+      ),
+  };
+}
+
+// ---------------------------------------------------------------- step 7
 
 export type SummaryResult =
   | { ok: true; summary: SetupSummary }
@@ -315,7 +474,7 @@ export type CompleteSetupResult = { ok: false; gone?: true; message: string };
  *
  * Requires a session: an anonymous caller must never be able to flip the flag,
  * because that would lock the real owner out of the wizard before they have an
- * account. Returns only a failure shape — success redirects and never returns.
+ * account. Returns only a failure shape, because success redirects and never returns.
  */
 export async function completeSetupAction(): Promise<CompleteSetupResult> {
   if (await isSetupCompleted()) return gone();
