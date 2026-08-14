@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 /**
  * Shell for the two pages that exist before anyone is signed in: /login and
  * /onboarding. The same 60px chrome as the back office, so the app is already
- * recognisable before the first sign-in — but no sidebar, because there is
+ * recognisable before the first sign-in, but no sidebar, because there is
  * nowhere else to go yet.
  */
 export default function PublicLayout({ children }: { children: ReactNode }) {
@@ -22,9 +22,14 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         <ThemeToggle />
       </header>
 
+      {/*
+        The column is fluid and 360px-safe. Its cap belongs to each page rather
+        than to the shell: /login is a four-field form and wants max-w-lg, while
+        /onboarding lays illustrations beside their instructions and would put
+        them at thumbnail size in 512px.
+      */}
       <main className="flex flex-1 justify-center px-4 py-8 sm:py-12">
-        {/* 360px-safe: the column is fluid and only capped on wider screens. */}
-        <div className="w-full max-w-lg">{children}</div>
+        <div className="w-full">{children}</div>
       </main>
     </div>
   );

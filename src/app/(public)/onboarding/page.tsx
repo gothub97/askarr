@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getSession } from "@/lib/session";
+import { getSetupProgressAction } from "@/lib/actions/onboarding";
 import { isSetupCompleted } from "@/lib/settings";
 import { OnboardingWizard } from "./onboarding-wizard";
 
@@ -21,7 +21,7 @@ import { OnboardingWizard } from "./onboarding-wizard";
  * A page in the App Router cannot choose its own HTTP status. The only lever
  * Next gives a Server Component is the access-fallback family (`notFound`,
  * `forbidden`, `unauthorized`), and Next hard-limits those to 404 / 403 / 401
- * — see `HTTPAccessErrorStatus` in
+ * (see `HTTPAccessErrorStatus` in
  * next/dist/client/components/http-access-fallback/http-access-fallback.js,
  * where any other code is rejected by `isHTTPAccessFallbackError`. A 410 has
  * to come from something that owns the Response object: the proxy/middleware
@@ -32,7 +32,7 @@ import { OnboardingWizard } from "./onboarding-wizard";
  *
  *   1. src/middleware.ts intercepts /onboarding once setup is completed, so
  *      the wizard is unreachable in a browser. (It currently redirects to
- *      /dashboard; one line there could return a real 410 body instead — that
+ *      /dashboard; one line there could return a real 410 body instead, and that
  *      file is not ours to change.)
  *   2. GET /api/onboarding/telegram-chats answers a literal 410 Gone.
  *   3. Every server action in src/lib/actions/onboarding.ts refuses with a
@@ -55,25 +55,20 @@ export default async function OnboardingPage() {
   if (await isSetupCompleted()) return <SetupAlreadyDone />;
 
   /*
-   * A session here means step 1 already ran and the page was reloaded. Resume
-   * at step 2 instead of offering to create a second administrator.
+   * Where to resume is read from the database, not from the browser. Two of the
+   * seven steps send the operator to Telegram, and some of them will close the
+   * tab on the way; they must come back to the step they left rather than to an
+   * offer to create a second administrator.
    */
-  const session = await getSession();
+  const progress = await getSetupProgressAction();
 
-  return (
-    <OnboardingWizard
-      initialAdministrator={
-        session
-          ? { name: session.user.name, email: session.user.email }
-          : null
-      }
-    />
-  );
+  // The wizard caps its own column: the width it wants changes with the step.
+  return <OnboardingWizard initialProgress={progress} />;
 }
 
 function SetupAlreadyDone() {
   return (
-    <Card>
+    <Card className="mx-auto w-full max-w-lg">
       <CardHeader>
         <CardTitle className="text-xl">
           Setup is already done
