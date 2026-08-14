@@ -27,15 +27,15 @@ the instances it serves.
 |  |  |
 |---|---|
 | ![Requests](docs/screenshots/requests.png) | ![Dashboard](docs/screenshots/dashboard.png) |
-| **Requests** — what the group asked for, and how far it got. | **Dashboard** — what is waiting on you right now. |
+| **Requests**: what the group asked for, and how far it got. | **Dashboard**: what is waiting on you right now. |
 | ![Instances](docs/screenshots/instances.png) | ![Groups](docs/screenshots/groups.png) |
-| **Instances** — Radarr and Sonarr, with one-press webhook setup. | **Groups** — which chats may ask, and which topic does what. |
+| **Instances**: Radarr and Sonarr, with one-press webhook setup. | **Groups**: which chats may ask, and which topic does what. |
 
 ## Three surfaces
 
-- **The Telegram bot** — where requests happen. Usable only from groups you have explicitly allowed.
-- **The Telegram Mini App** — browsing and tracking, opened from the bot.
-- **The web back office** — administration, behind its own login.
+- **The Telegram bot**, where requests happen. Usable only from groups you have explicitly allowed.
+- **The Telegram Mini App**, for browsing and tracking, opened from the bot.
+- **The web back office**, for administration, behind its own login.
 
 The Mini App and the back office are the same Next.js application with two
 separate authentication systems: Telegram `initData` validation on one side,
@@ -67,9 +67,14 @@ Then:
 docker compose up -d
 ```
 
-Open `APP_URL` and the first-run wizard takes over: administrator account,
-first instance, Telegram group. Steps two and three are skippable — Askarr
-boots with nothing configured and tells you what is missing.
+Open `APP_URL` and the first-run wizard takes over. Seven steps, and it walks
+you through creating the bot with pictures, so you do not need the section
+below unless you like reading ahead. Two of the seven are required, the bot and
+your first group, because Askarr cannot do anything without them. Radarr and
+Sonarr can wait.
+
+You can leave and come back. The wizard sends you to Telegram twice and
+remembers where you were, so closing the tab loses nothing.
 
 The image is published to
 [GHCR](https://github.com/gothub97/askarr/pkgs/container/askarr) for
@@ -86,18 +91,22 @@ The image is published to
 
 ## Setting up the bot
 
+The wizard covers all of this, illustrated, at install time. It is written out
+here for anyone changing a bot later, or reading before they install.
+
 ### 1. Create it and get the token
 
 1. Open [@BotFather](https://t.me/botfather) and send `/newbot`.
 2. Give it a display name, then a username ending in `bot`.
 3. BotFather replies with a line like `123456789:AAH...`. **That is the token.**
 
-Put it in the back office under **Bot → New token from BotFather**, or in
-`.env` as `TELEGRAM_BOT_TOKEN` before the first start. The back office wins if
-both are set: it checks the token with Telegram before saving it, and the bot
-picks it up within a few seconds without a restart.
+Paste it into the wizard, or later into the back office under **Bot → New token
+from BotFather**. `TELEGRAM_BOT_TOKEN` in `.env` still works as a seed for an
+install that is being scripted. Whatever you save in the app wins over the
+environment: it is checked with Telegram before it is saved, and the bot picks
+it up within a second without a restart.
 
-The token is stored encrypted and is never shown again — only its last four
+The token is stored encrypted and is never shown again, only its last four
 characters, so you can tell two tokens apart without being able to use either.
 
 ### 2. Leave privacy mode on
@@ -106,12 +115,24 @@ characters, so you can tell two tokens apart without being able to use either.
 it: the bot sees commands and replies to its own messages, and nothing else.
 Your group's conversation stays yours.
 
-### 3. Add it to your group
+### 3. Turn inline mode on
 
-Add the bot as a member. It shows up in the back office under **Groups**, not
-yet allowed, and you press **Allow**.
+`/setinline` → then send the placeholder people will see in the input field,
+something like `Search for a film or show`.
 
-A message from a group that has not been allowed produces no response at all —
+**This one is off by default and easy to miss.** Without it, typing
+`@yourbot dune` in a chat does nothing at all: no results, no error, nothing to
+tell you a switch was never flipped. Privacy mode is not weakened by it, because
+inline results are gated on identity rather than on chat. Only someone who has
+already spoken in an allowed group gets any.
+
+### 4. Add it to your group
+
+Add the bot as a member and promote it to administrator. It shows up in the
+wizard, or in the back office under **Groups**, not yet allowed, and you press
+**Allow**.
+
+A message from a group that has not been allowed produces no response at all:
 not an error, not a refusal. Askarr never confirms to a stranger that it exists.
 
 ---
@@ -127,9 +148,10 @@ will keep the three kinds of message apart:
 | **Approval** | where admins approve or turn a request down |
 | **General** | where a new film or show is announced once it lands |
 
-In the back office, open **Groups** and press **Create the missing topics**.
-Askarr creates them in Telegram and stores their ids for you. Pressing it twice
-is safe — it only fills the purposes that are still unset.
+The wizard offers this as step five, and the back office has it too: open
+**Groups** and press **Create the missing topics**. Askarr creates them in
+Telegram and stores their ids for you. Pressing it twice is safe, because it
+only fills the purposes that are still unset.
 
 To point a purpose at a topic you already have, open that topic in Telegram,
 copy its link, and take the last number. That is the id the field wants.
@@ -137,7 +159,7 @@ copy its link, and take the last number. That is the id the field wants.
 <details>
 <summary>Why there is no dropdown to pick from</summary>
 
-The Bot API can *create* a forum topic but has no method to *list* them —
+The Bot API can *create* a forum topic but has no method to *list* them:
 `createForumTopic` exists, `getForumTopics` does not. There is nothing to fill
 a select box from, so creating them is the one path that ends with the right
 ids and no copying of links by hand.
@@ -151,7 +173,7 @@ a message crossing topics mentions the person instead of replying to them.
 ## The Mini App
 
 Telegram will only open a **public HTTPS URL with a valid certificate**, and it
-has to be registered against the bot — otherwise the link opens in an ordinary
+has to be registered against the bot. Otherwise the link opens in an ordinary
 in-app browser, the Telegram bridge is never injected, and Askarr shows
 "This screen only works inside Telegram."
 
@@ -173,7 +195,7 @@ Add an instance in the back office, press **Test connection**, then pick a
 quality profile and root folder from what the instance reports.
 
 Then press **Set the webhook up**. Askarr registers it on the instance over the
-API — no pasting a URL into Settings → Connect, and no forgetting which events
+API, so there is no URL to paste into Settings → Connect and no forgetting which events
 to tick. The events it needs are read off the instance's own schema, because
 Radarr and Sonarr name them differently and the set grows between versions.
 
@@ -199,7 +221,7 @@ Everyone starts as `GUEST` with five requests a month. A full series always
 goes through review, even for a trusted user, because it can trigger hundreds
 of grabs; a single season does not.
 
-Quota counts requests over a rolling 30-day window — not bytes, and not
+Quota counts requests over a rolling 30-day window, not bytes and not
 calendar months.
 
 ### Commands
@@ -214,7 +236,8 @@ calendar months.
 | `/help` | Command reminder |
 
 There is also inline mode: type `@yourbot dune` in the group and pick from the
-results without a slash command at all.
+results without a slash command at all. It needs `/setinline` in BotFather
+first, which the wizard walks you through.
 
 ---
 
@@ -231,7 +254,7 @@ started, rather than a comfortable "already there" that would leave you waiting
 for a file that was never coming.
 
 Notifications arrive as a reply to the message that asked. If that message is
-gone, Askarr falls back to a plain message carrying an inline mention — built
+gone, Askarr falls back to a plain message carrying an inline mention, built
 as a `tg://user` link, because not every member has a `@username`. A completed
 season produces one notification, never one per episode.
 
@@ -265,7 +288,7 @@ Working on the Mini App means a tunnel, since Telegram needs public HTTPS.
 cross-origin dev-asset check; without that the page loads and every script
 behind it 403s.
 
-**Design:** [`DESIGN.md`](DESIGN.md) records the visual system — Askarr wears
+**Design:** [`DESIGN.md`](DESIGN.md) records the visual system. Askarr wears
 the \*arr interface language on purpose, so it sits beside Radarr without
 looking like a different product. [`PRODUCT.md`](PRODUCT.md) records what the
 thing is and who it is for.
