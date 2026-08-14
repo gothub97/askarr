@@ -50,6 +50,10 @@ things Askarr talks to are Telegram and the instances it serves.
   learns that something was grabbed or imported.
 - Self-hosted. Operators deploy into their own infrastructure, so Askarr cannot
   assume a network shape, a domain, a reverse proxy, or a deployment method.
+- Two deployment shapes are served: Docker Compose, and a single Proxmox LXC.
+  Proxmox VE 9.1 can run an OCI image as a container but has no compose
+  equivalent, so the LXC install needs one image carrying Postgres and both
+  processes rather than the three the compose file starts.
 
 ## Capabilities and Constraints
 
