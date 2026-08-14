@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Askarr design tokens — the *arr interface language.
+ * Askarr design tokens: the *arr interface language.
  *
  * The values below come from Radarr and Sonarr's own theme and component CSS.
  * Those two apps are one design system differing in a single hue, and Askarr
@@ -15,13 +15,13 @@
  * Three rules explain nearly every value here:
  *
  * 1. Depth is a stack of background values, not a shadow system. Page, chrome,
- *    panel — #202020 / #2a2a2a / #333. Shadow is reserved for the three things
+ *    panel, at #202020 / #2a2a2a / #333. Shadow is reserved for the three things
  *    that genuinely leave the page: a menu or popover above the content, the
  *    focus glow on a field, and the progress track's inset recess. Nothing
  *    else is allowed to float.
  * 2. Accenting is two-tone. A brand hue (gold in Radarr, cyan in Sonarr, amber
- *    here) marks the active nav item, hovers and the logo. A separate blue —
- *    the same blue in both apps — carries buttons and links. `--brand` is
+ *    here) marks the active nav item, hovers and the logo. A separate blue,
+ *    the same blue in both apps, carries buttons and links. `--brand` is
  *    chrome; `--primary` is action. Wiring one to the other collapses the
  *    distinction that makes the family legible.
  * 3. It is small and square. 14px base, nothing above 16px, 2px on labels and
@@ -40,17 +40,17 @@
 
   /*
    * The *arr scale: 11 / 12 / 14 / 15 / 16. That is the whole thing. There is
-   * no display size, because there is no display type — a page title is body
+   * no display size, because there is no display type. A page title is body
    * text one step up, in bold. Anything larger belongs to a different product.
    */
   --text-xs: 0.6875rem; /* 11 */
   --text-sm: 0.75rem; /* 12 */
-  --text-base: 0.875rem; /* 14 — the base, and the body default */
+  --text-base: 0.875rem; /* 14, the base and the body default */
   --text-lg: 0.9375rem; /* 15 */
   --text-xl: 1rem; /* 16 */
 
   /*
-   * Body leading is the *arr value verbatim — 1.528571429, which is 21.4px at
+   * Body leading is the *arr value verbatim, 1.528571429, which is 21.4px at
    * 14px. It must match the `line-height` on `body` below, or text inheriting
    * from the body sets on a different rhythm than text carrying a `text-base`
    * utility, and the two are impossible to line up in a table cell.
@@ -126,7 +126,7 @@
 /*
  * Light, from Radarr's `Themes/light.js`.
  *
- * The chrome stays dark here. That is not an oversight in the source — it is
+ * The chrome stays dark here. That is not an oversight in the source. It is
  * how the *arr light theme actually works, and it is what keeps the app
  * recognisable when someone flips the switch. Askarr goes one step further and
  * holds the header and sidebar at exactly the dark theme's values, because the
@@ -202,6 +202,34 @@
   --app-primary: #2c6cb8;
   --app-primary-fill: #3273c8;
   --app-primary-foreground: #ffffff;
+
+  /*
+   * The onboarding plates: the drawn BotFather and group illustrations in
+   * src/components/onboarding/illustrations.
+   *
+   * Not to be confused with --tg-theme-*, which is Telegram's own palette
+   * handed to the Mini App by the client. These are ours, and they exist so a
+   * plate follows the operator's theme instead of being a dark screenshot
+   * pasted onto a light page. Telegram's shapes, Askarr's values.
+   */
+  --plate-shell: #ffffff;
+  --plate-head: #f2f5f9;
+  --plate-in: #eef1f6;
+  --plate-out: #3273c8;
+  --plate-on-out: #ffffff;
+  --plate-ink: #2b2f33;
+  --plate-dim: #5c626b;
+  --plate-line: #e3e7ec;
+  --plate-avatar: #3273c8;
+  --plate-avatar-ink: #ffffff;
+  /* The token line, and the one caption per plate that points at it. */
+  --plate-highlight: #fff3e0;
+  --plate-highlight-line: #9a5000;
+  --plate-highlight-ink: #7a4200;
+  --plate-note: #9a5000;
+  --plate-good: #1a7a34;
+  --plate-selected: #eaf1fb;
+  --plate-service: rgba(0, 0, 0, 0.05);
 }
 
 /*
@@ -223,7 +251,7 @@
   --popover: #2a2a2a;
   --popover-foreground: #cccccc;
 
-  /* Chrome accent. Never a fill — see the warning note below. */
+  /* Chrome accent. Never a fill: see the warning note below. */
   --brand: #ff8c2b;
   --brand-foreground: #202020;
 
@@ -249,7 +277,7 @@
   --destructive-foreground: #202020;
 
   /* The family's "missing / in the queue" purple. Dark enough that the fill
-     genuinely does take white — and too dark to be read as text, so the
+     genuinely does take white, and too dark to be read as text, so the
      outline variant gets its own lifted ink. */
   --queue: #7a43b6;
   --queue-foreground: #ffffff;
@@ -288,6 +316,26 @@
   --app-primary: #6fa8ee;
   --app-primary-fill: #3273c8;
   --app-primary-foreground: #ffffff;
+
+  /* The plates in the dark register. Telegram's own night values, which is
+     what makes them read as a chat window rather than as another panel. */
+  --plate-shell: #17212b;
+  --plate-head: #232e3c;
+  --plate-in: #182533;
+  --plate-out: #2b5278;
+  --plate-on-out: #eaf2fb;
+  --plate-ink: #e9edf1;
+  --plate-dim: #97a4b1;
+  --plate-line: #2b3a4a;
+  --plate-avatar: #3273c8;
+  --plate-avatar-ink: #ffffff;
+  --plate-highlight: #3d2a10;
+  --plate-highlight-line: #ff8c2b;
+  --plate-highlight-ink: #ffb267;
+  --plate-note: #ff8c2b;
+  --plate-good: #8bc34a;
+  --plate-selected: #233042;
+  --plate-service: rgba(255, 255, 255, 0.07);
 }
 
 @layer base {
@@ -306,7 +354,7 @@
   }
 
   /*
-   * Headings are body text in bold. No size jump, no tracking, no uppercase —
+   * Headings are body text in bold. No size jump, no tracking, no uppercase.
    * that restraint is a large part of why an *arr screen reads as a console
    * rather than a marketing page.
    */
@@ -375,9 +423,9 @@
   /*
    * Each fallback is the ambient theme's own value, captured as `--app-*`
    * above, rather than a hardcoded light one. Inside Telegram the `--tg-*`
-   * variables are always present and this never matters; outside it — the
+   * variables are always present and this never matters; outside it the
    * "open this in Telegram" screen, reachable by pasting the URL in a browser
-   * — a hardcoded light default rendered a light page inside a dark app.
+   * result was that a hardcoded light default rendered a light page inside a dark app.
    */
   --background: var(--tg-theme-bg-color, var(--app-background));
   --surface: var(--tg-theme-secondary-bg-color, var(--app-surface));
