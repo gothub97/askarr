@@ -208,11 +208,6 @@ separated jobs, and a six-term semantic vocabulary (`default`, `primary`,
 the button all consume identically, so a status looks the same everywhere it
 appears.
 
-One surface deliberately breaks the palette. The Telegram Mini App keeps
-Telegram's own colours and takes only Askarr's shapes: its reader is a requester
-inside a chat client who has never seen Radarr, so it wears their client's
-clothes rather than the operator's.
-
 **Key Characteristics:**
 - Three-value grey chrome (`#202020` page / `#2a2a2a` chrome / `#333` panel), no floating in-flow surfaces
 - Two-tone accenting: amber is chrome, blue is action, and they never swap
@@ -276,10 +271,10 @@ never fills; gold only ever fills. They do not share an element.
 values in both themes. The amber needs a dark ground to clear 4.5:1, and a
 chrome that shifted with the theme would have to drop the accent in one of them.
 
-**The Borrowed-Palette Rule.** Inside the Telegram Mini App the palette comes
-from `--tg-theme-*` and wins over everything above; only the shapes carry over.
-Its fallbacks are the `--app-*` snapshot of the ambient theme, never a hardcoded
-light default — a hardcoded default rendered a white page inside a dark client.
+**The Drawn-Illustration Rule.** The onboarding plates are SVG in `--plate-*`,
+which shadows the ambient theme rather than fixing Telegram's night palette. A
+screenshot would have been a dark rectangle pasted onto a light page, and stale
+the next time Telegram restyled.
 
 ## Typography
 
@@ -324,9 +319,10 @@ width, over a fixed 210px sidebar (`--spacing-sidebar`) pinned below it, with
 content full-bleed beside them. Both dimensions come from the *arr family's own
 `dimensions.js`. Main content is offset by `pt-header md:pl-sidebar` and padded
 `10px` on small screens, `20px` from the `sm` breakpoint up. Nothing is centred
-and nothing is capped — the only max-width in the app is on the two signed-out
-pages (`max-w-lg`) and the Mini App frame (`max-w-lg`), where a single form or a
-phone column is the whole content.
+and nothing is capped — the only max-widths in the app are on the signed-out
+pages, where `/login` caps at `max-w-lg` and the onboarding wizard moves between
+`max-w-xl` and `max-w-4xl` depending on whether its step lays an illustration
+beside its instruction.
 
 Vertical rhythm inside a page is a 20px gap between sections and an 8px gap
 between a section title and its panel. Within a panel, table cells are a flat
@@ -342,10 +338,6 @@ Responsive behaviour, in the order the breakpoints fire:
 - **`sm` (640px).** Page padding goes 10px → 20px; the header's title search appears; the page header's action row moves from stacked to inline.
 - **`md` (768px).** The sidebar appears. Below it the same nav list lives in a modal drawer opened from a hamburger in the header — Escape closes it, focus moves in and returns to the trigger, and the page behind cannot scroll.
 - **`lg` (1024px).** The signed-in email appears in the header.
-
-The Mini App is phone-first and does not use the shell above: a sticky top bar,
-a scrolling main with 112px of bottom padding, and a fixed bottom tab bar that
-respects `env(safe-area-inset-bottom)`.
 
 ### Named Rules
 
@@ -504,10 +496,7 @@ the caption is announced once.
 
 A bordered `surface` panel at 4px corners, padded `20px 16px`, left-aligned:
 title in body ink, an optional hint in quiet ink, and an optional action button.
-It names the situation and offers the next move rather than shrugging. The Mini
-App deliberately does not reuse it — there, an empty pane is centred and
-borderless, because it is the only thing on the screen rather than one panel
-among several.
+It names the situation and offers the next move rather than shrugging.
 
 ### Poster
 
@@ -516,15 +505,15 @@ because the title always sits beside it as real text. When there is no image it
 still renders the box with a centred film glyph, so a row of posters keeps its
 column instead of closing up around the gap.
 
-### Mini App Pieces
+### Onboarding Plates
 
-Same shapes, borrowed palette. Chips are 2px squares that use the (Telegram-mapped)
-brand as border, 10% tint and ink when active. The segmented control is a single
-4px-cornered bordered strip with hairline dividers and a `secondary` fill on the
-selected segment. The bottom sheet is the one exception to the corner rule in
-spirit but not in value: it is `rounded-t-xl`, which resolves to the same 4px.
-The bottom tab bar marks the active tab with a 2px top border and the accent as
-text colour — never a filled background.
+The first-run wizard's illustrations: SVG drawings of the BotFather
+conversation and of adding the bot to a group. Telegram's shapes, Askarr's
+values. Every colour is a `--plate-*` token defined in both themes, so a plate
+reads as a chat window on either ground rather than as a screenshot pasted onto
+the page. The three forum icon colours are the exception and stay literal,
+because they are Telegram's own and the drawing has to match what the operator
+sees after pressing the button.
 
 ## Do's and Don'ts
 
@@ -539,7 +528,7 @@ text colour — never a filled background.
 - **Do** render machine strings — IDs, keys, URLs, versions, timestamps — in the mono `Data` component with tabular figures, in the fixed `YYYY-MM-DD HH:MM` shape.
 - **Do** keep the header, sidebar and drawer on their dark values in both themes.
 - **Do** give every control a visible focus treatment: the amber `2px solid var(--ring)` for buttons, links and chips; the blue border-and-glow for text fields.
-- **Do** let the Mini App take its colours from `--tg-theme-*`, falling back to the `--app-*` snapshot of the ambient theme.
+- **Do** paint the onboarding plates from `--plate-*` so they follow the theme, and leave the three Telegram forum icon colours literal.
 
 ### Don't:
 

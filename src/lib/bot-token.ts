@@ -9,10 +9,9 @@ import { prisma } from "./prisma";
  * file or rebuilding a container; the environment variable is kept as a seed
  * so a fresh install still boots with no UI visit.
  *
- * Everything that touches Telegram must come through here. Sending, and
- * validating Mini App initData, are both keyed on the token, so a reader stuck
- * on the old value does not fail loudly — it silently rejects every signature
- * the real bot produces.
+ * Everything that touches Telegram must come through here. A reader stuck on an
+ * old value does not fail loudly: it goes on talking to Telegram as a bot that
+ * no longer exists, and every send is refused.
  *
  * At rest the token is encrypted. It is the one credential that grants control
  * of the identity people talk to: with it, someone can read the group's

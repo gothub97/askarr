@@ -25,11 +25,9 @@ import type { ResolvedBot, SetupSummary } from "./types";
  * The recap is read back from the database rather than from wizard state: what
  * matters is what was actually written, not what the browser thinks it sent.
  *
- * The last block is the one worth having. Two things cannot be finished from
- * here (the Mini App has to be switched on in BotFather by hand, and quotas
- * start at a default nobody chose) and an operator who is not told will find
- * out from a person asking why something does not work. Saying it here costs a
- * paragraph.
+ * The last block is the one worth having. Quotas start at a default nobody
+ * chose, and an operator who is not told will find out from a person asking why
+ * their request was refused. Saying it here costs a sentence.
  */
 
 export function StepSummary({
@@ -136,11 +134,10 @@ export function StepSummary({
 
         <Alert variant="warning">
           <TriangleAlertIcon />
-          <AlertTitle>Two things Askarr cannot do for you</AlertTitle>
+          <AlertTitle>One thing left to choose</AlertTitle>
           <AlertDescription>
-            The Mini App has to be switched on in BotFather by hand, under Bot
-            Settings then Configure Mini App. And everyone starts on five
-            requests a month until you change it under Settings.
+            Everyone starts on five requests a month. Change it under Settings
+            before someone runs into it and asks you why.
           </AlertDescription>
         </Alert>
 

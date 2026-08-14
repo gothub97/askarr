@@ -16,7 +16,6 @@ x-askarr: &askarr
   environment: &askarr-env
     DATABASE_URL: ${DATABASE_URL}
     APP_URL: ${APP_URL}
-    TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL}
     TZ: ${TZ:-UTC}
 
 services:
